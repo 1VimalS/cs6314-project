@@ -1,0 +1,37 @@
+/* Styles for the count bubbles next to each user in the side nav */
+.bubbles-container{
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	margin-left: 12px;
+}
+.count-bubble{
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 26px;
+	height: 26px;
+	padding: 0 8px;
+	border-radius: 13px;
+	color: white;
+	font-weight: 600;
+	font-size: 12px;
+}
+.photo-bubble{
+	background-color: #2e7d32; /* green */
+}
+.comment-bubble{
+	background-color: #d32f2f; /* red */
+	border: none;
+	cursor: pointer;
+}
+.comment-bubble:focus{
+	outline: 2px solid rgba(0,0,0,0.12);
+}
+
+/* Keep list rows tidy */
+.user-list-row .MuiListItem-root{
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
