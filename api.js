@@ -1,4 +1,8 @@
-import api from './client';
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:3001',
+});
 
 // Users
 export const fetchUsers = async () => {
