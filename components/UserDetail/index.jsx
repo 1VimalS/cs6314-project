@@ -1,29 +1,22 @@
-import {useEffect, useState, React} from 'react';
+import { React } from 'react';
 import { Link } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
 import { Typography, Card, CardContent, Button, Box } from '@mui/material';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { fetchUser } from '../../api';
 
 import './styles.css';
 
 function UserDetail({ userId }) {
-  // State to store the current user's details
-  const [user, setUser] = useState(null);
+  const { data: user, isLoading, isError } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchUser(userId),
+    enabled: !!userId,
+  });
 
-  useEffect(() => {
-    // Fetch user details when component mounts or when userId changes
-    const fetchUser = async () => {
-      try {
-        const res = await axios.get(`http://localhost:3001/user/${userId}`);
-        setUser(res.data);
-      } catch (error) {
-          console.error('Error fetching user details:', error);
-      }
-    };
-    fetchUser();
-  }, [userId]);
-
+  if (isLoading) { return <div>Loading user...</div>; }
+  if (isError) { return <div>Error loading user.</div>; }
 
   return (
     // Only render once the user data has been successfully fetched

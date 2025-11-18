@@ -1,9 +1,10 @@
-import { useEffect, useState, React } from 'react';
+import { React, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
 import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack } from '@mui/material';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPhotosOfUser, fetchPhotoOfUserByIndex } from '../../api';
 
 import './styles.css';
 
@@ -11,59 +12,60 @@ function UserPhotos({ userId, advancedEnabled }) {
   const navigate = useNavigate();
   const params = useParams();
   const indexParam = params.index ? parseInt(params.index, 10) : null;
-  // State to store the list of photos for the user
-  const [photos, setPhotos] = useState([]); // non-advanced mode
-  const [photo, setPhoto] = useState(null); // advanced mode
-  const [totalPhotos, setTotalPhotos] = useState(0);
 
-  // Handle route switching when advanced feature toggle changes
+  /**
+   * Sync the route with the Advanced toggle:
+   *  - If Advanced is ON and there is no index in the URL, go to /photos/:userId/1
+   *  - If Advanced is OFF but URL has an index, go back to /photos/:userId
+   */
   useEffect(() => {
     if (advancedEnabled && !indexParam) {
-      // If advanced turned on but URL has no index, append /1
       navigate(`/photos/${userId}/1`, { replace: true });
     } else if (!advancedEnabled && indexParam) {
-      // If advanced turned off but URL has /:index, go back to base user photos
       navigate(`/photos/${userId}`, { replace: true });
     }
-  }, [advancedEnabled]);
+  }, [advancedEnabled, indexParam, userId, navigate]);
 
-  // Non-advanced mode: fetch all photos when userId or advancedEnabled changes
-  useEffect(() => {
-    if (!advancedEnabled) {
-      const fetchAllPhotos = async () => {
-        try {
-          const res = await axios.get(`http://localhost:3001/photosOfUser/${userId}`);
-          setPhotos(res.data);
-        } catch (error) {
-          console.error('Error fetching all user photos:', error);
-        }
-      };
-      fetchAllPhotos();
-    }
-  }, [userId, advancedEnabled]);
+  // Non-advanced mode: fetch all photos of the user
+  const { data: photos = [], isLoading: isLoadingPhotos, isError: isErrorPhotos } = useQuery({
+    queryKey: ['photosOfUser', userId],
+    queryFn: () => fetchPhotosOfUser(userId),
+    enabled: !advancedEnabled && !!userId,
+  });
 
   // Advanced mode: fetch single photo by index
-  useEffect(() => {
-    if (advancedEnabled && indexParam) {
-      const fetchPhotoByIndex = async () => {
-        try {
-          const res = await axios.get(`http://localhost:3001/photosOfUser/${userId}/${indexParam}`);
-          setPhoto(res.data);
-          // Also fetch total count once so we know bounds
-          const all = await axios.get(`http://localhost:3001/photosOfUser/${userId}`);
-          setTotalPhotos(all.data.length);
-        } catch (error) {
-          console.error('Error fetching photo by index:', error);
-          setPhoto(null);
-        }
-      };
-      fetchPhotoByIndex();
+  const { data: photo, isLoading: isLoadingPhoto, isError: isErrorPhoto } = useQuery({
+    queryKey: ['photoOfUserByIndex', userId, indexParam],
+    queryFn: () => fetchPhotoOfUserByIndex(userId, indexParam),
+    enabled: advancedEnabled && !!userId && !!indexParam,
+  });
+
+  // For advanced mode, also fetch all photos to determine total count
+  const { data: allPhotos = [], isLoading: isLoadingAllPhotos, isError: isErrorAllPhotos } = useQuery({
+    queryKey: ['photosOfUser', userId],
+    queryFn: () => fetchPhotosOfUser(userId),
+    enabled: advancedEnabled && !!userId,
+  });
+  const totalPhotos = allPhotos.length;
+
+  // Loading / error states
+  if (!advancedEnabled) {
+    if (isLoadingPhotos) return <Typography>Loading photos...</Typography>;
+    if (isErrorPhotos) return <Typography>Error loading photos.</Typography>;
+  } else {
+    if (isLoadingPhoto || isLoadingAllPhotos) {
+      return <Typography>Loading photo...</Typography>;
     }
-  }, [userId, indexParam, advancedEnabled]);
+    if (isErrorPhoto || isErrorAllPhotos) {
+      return <Typography>Error loading photo.</Typography>;
+    }
+  }
 
   // If advanced enabled, render a single-photo viewer with stepper controls
   if (advancedEnabled) {
-    if (!photo) return null;
+    if (!photo || !indexParam || totalPhotos === 0) {
+      return <Typography>No photos found.</Typography>;
+    }
 
     const currentIndex = indexParam;
     const handlePrev = () => {
@@ -140,7 +142,10 @@ function UserPhotos({ userId, advancedEnabled }) {
     );
   }
 
-  // Default (non-advanced) view: render all photos as before
+  // Default (non-advanced) view: render all photos stacked
+  if (!photos || photos.length === 0) {
+    return <Typography>No photos found.</Typography>;
+  }
   return (
     // Only render photos if they exist and the array isn't empty
     photos && photos.length > 0 && (

@@ -1,35 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
 import { List, ListItem, ListItemAvatar, Avatar, ListItemText, Typography, Divider, Box } from '@mui/material';
-import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { fetchUserComments } from '../../api';
 
 import './styles.css';
 
 function UserComments({ userId: propUserId }) {
   const params = useParams();
   const userId = propUserId || params.userId;
-  const [items, setItems] = useState([]); // { photo, comments[] }
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!userId) return;
-    const fetch = async () => {
-      try {
-        const res = await axios.get(`http://localhost:3001/user/${userId}/comments`);
-        setItems(res.data || []);
-      } catch (err) {
-        console.error('Error fetching comments-by-user photos:', err);
-      }
-    };
-    fetch();
-  }, [userId]);
+  const { data: items = [], isLoading, isError } = useQuery({
+    queryKey: ['userComments', userId],
+    queryFn: () => fetchUserComments(userId),
+    enabled: !!userId,
+  });
 
   const goToPhoto = (photo) => {
     const ownerId = (photo.user_id && photo.user_id._id) || photo.user_id || '';
     navigate(`/photos/${ownerId}/${photo.index}`);
   };
+
+  if (isLoading) return <Typography>Loading comments...</Typography>;
+  if (isError) return <Typography>Error loading comments.</Typography>;
 
   return (
     <Box>

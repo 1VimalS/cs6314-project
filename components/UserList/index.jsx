@@ -1,64 +1,39 @@
-import { useEffect, useState, React } from 'react';
+import { React } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import {
   Divider,
   List,
   ListItem,
   ListItemText,
 } from '@mui/material';
-
+import { useQuery } from '@tanstack/react-query';
+import { fetchUsers, fetchUserCounts } from '../../api';
 import './styles.css';
 
 function UserList({ advancedEnabled = false }) {
-  // State to store the list of all users
-  const [users, setUsers] = useState([]);
-  // State to store counts per user: { [userId]: { photos: number, comments: number } }
-  const [counts, setCounts] = useState({});
   // Hook used for programmatic navigation
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch the list of users when the component first mounts
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get('http://localhost:3001/user/list');
-        setUsers(res.data);
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      }
-    };
-    fetchUsers();
-  }, []);
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
 
-  // When advancedEnabled is on and we have users, fetch the counts for each user
-  useEffect(() => {
-    if (!advancedEnabled || !users || users.length === 0) return () => {};
-
-    let cancelled = false;
-
-    const fetchCounts = async () => {
-      try {
-        const promises = users.map((u) => axios.get(`http://localhost:3001/user/${u._id}/counts`).then(r => ({ id: u._id, data: r.data })).catch(err => {
-          console.error(`Failed to fetch counts for user ${u._id}:`, err);
-          return { id: u._id, data: { photos: 0, comments: 0 } };
-        }));
-
-        const results = await Promise.all(promises);
-        if (cancelled) return;
-
-        const map = {};
-        results.forEach(r => { map[r.id] = r.data; });
-        setCounts(map);
-      } catch (err) {
-        console.error('Error fetching user counts:', err);
-      }
-    };
-
-    fetchCounts();
-
-    return () => { cancelled = true; };
-  }, [advancedEnabled, users]);
+  const { data: counts = {} } = useQuery({
+    queryKey: ['userCounts', users.map(u => u._id)],
+    queryFn: async () => {
+      const results = await Promise.all(
+        users.map(u => fetchUserCounts(u._id)
+            .then(data => ({ id: u._id, data }))
+            .catch(() => ({ id: u._id, data: { photos: 0, comments: 0 } }))
+        )
+      );
+      const map = {};
+      results.forEach(r => { map[r.id] = r.data; });
+      return map;
+    },
+    enabled: advancedEnabled && users.length > 0,
+  });
 
   return (
     <div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import ReactDOM from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Grid, Paper } from '@mui/material';
 import {
   BrowserRouter, Route, Routes, useParams
@@ -66,5 +67,11 @@ function PhotoShare() {
   );
 }
 
+const queryClient = new QueryClient();
+
 const root = ReactDOM.createRoot(document.getElementById('photoshareapp'));
-root.render(<PhotoShare />);
+root.render(
+  <QueryClientProvider client={queryClient}>
+    <PhotoShare />
+  </QueryClientProvider>
+);
