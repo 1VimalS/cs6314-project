@@ -34,7 +34,7 @@ function UserPhotos({ userId }) {
   }, [advancedEnabled, indexParam, userId, navigate]);
 
   // Non-advanced mode: fetch all photos of the user
-  const { data: photos = [], isLoading: isLoadingPhotos, isError: isErrorPhotos, error: photosError } = useQuery({
+  const { data: photos = [], isLoading: isLoadingPhotos, isError: isErrorPhotos } = useQuery({
     queryKey: ['photosOfUser', userId],
     queryFn: () => fetchPhotosOfUser(userId),
     enabled: !advancedEnabled && !!userId,
@@ -60,7 +60,7 @@ function UserPhotos({ userId }) {
   // Mutation for adding comments
   const addCommentMutation = useMutation({
     mutationFn: ({ photoId, comment }) => addComment(photoId, comment),
-    onSuccess: (updatedPhoto, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
       queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
       setCommentError('');

@@ -14,8 +14,6 @@ import multer from "multer";
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
-import axios from "axios";
-
 // ToDO - Your submission should work without this line. Comment out or delete this line for tests and before submission!
 // import models from "./modelData/photoApp.js";
 
@@ -86,7 +84,7 @@ app.get("/", function (request, response) {
 /**
  checks if user is logged in
  */
-function requireAuth(request, response, next) {
+const requireAuth = (request, response, next) => {
   // login/logout endpoints without authentication
   if (request.path === '/admin/login' || request.path === '/admin/logout') {
     return next();
@@ -106,12 +104,14 @@ function requireAuth(request, response, next) {
     return response.status(401).send('Unauthorized');
   }
 
-  next();
-}
+  return next();
+};
 
 app.use(requireAuth);
 
-
+/**
+ * /admin/login - posts login credentials and returns user info if authenticated
+ */
 app.post('/admin/login', async (request, response) => {
   try {
     const { login_name, password } = request.body;
@@ -149,13 +149,16 @@ app.post('/admin/login', async (request, response) => {
   }
 });
 
+/**
+ * /admin/logout - logs out the current user
+ */
 app.post('/admin/logout', async (request, response) => {
   try {
     if (!request.session || !request.session.userId) {
       return response.status(400).send({ error: 'Not logged in' });
     }
 
-    request.session.destroy((err) => {
+    return request.session.destroy((err) => {
       if (err) {
         console.error('Error destroying session:', err);
         return response.status(500).send({ error: 'Internal server error' });
@@ -169,7 +172,7 @@ app.post('/admin/logout', async (request, response) => {
 });
 
 /**
- register a new user
+ *  /user - register a new user
  */
 app.post('/user', async (request, response) => {
   try {
@@ -222,7 +225,7 @@ app.post('/user', async (request, response) => {
 });
 
 /**
- returns the current logged-in user (if any)
+ *  /admin/currentUser - returns the current logged-in user (if any)
  */
 app.get('/admin/currentUser', async (request, response) => {
   try {

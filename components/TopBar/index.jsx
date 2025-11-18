@@ -8,17 +8,20 @@ import useAppStore from '../../store/useAppStore';
 import './styles.css';
 
 function TopBar() {
+  // Access global state and actions from the app store
+  const { advancedEnabled, setAdvancedEnabled, currentUser, clearCurrentUser } = useAppStore();
+  // React Query client for cache management
+  const queryClient = useQueryClient();
+
   // Hook to access the current route path
   const location = useLocation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   // Text displayed on the right side of the top bar
   const [topBarText, setTopBarText] = useState('Click on any User Below!');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
 
-  const { advancedEnabled, setAdvancedEnabled, currentUser, setCurrentUser, clearCurrentUser } = useAppStore();
 
   // Check if the current route matches a user detail or user photos path
   const matchUserDetail = matchPath('/users/:userId', location.pathname);
