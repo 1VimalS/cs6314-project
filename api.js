@@ -52,6 +52,11 @@ export const fetchPhotosOfUser = async (userId) => {
     const res = await api.get(`/photosOfUser/${userId}`);
     return res.data;
   } catch (error) {
+    // if 400 error with "No photos found", return empty array instead of throwing
+    if (error.response && error.response.status === 400 &&
+      (error.response.data === 'No photos found' || error.response.data?.includes('No photos found'))) {
+      return [];
+    }
     console.error('Error fetching photos of user:', error);
     throw error;
   }
@@ -78,10 +83,10 @@ export const addComment = async (photoId, comment) => {
   }
 };
 
-// Authentication
-export const login = async (login_name) => {
+// Auth
+export const login = async (login_name, password) => {
   try {
-    const res = await api.post('/admin/login', { login_name });
+    const res = await api.post('/admin/login', { login_name, password });
     return res.data;
   } catch (error) {
     console.error('Error logging in:', error);
@@ -109,6 +114,16 @@ export const getCurrentUser = async () => {
       return null;
     }
     console.error('Error fetching current user:', error);
+    throw error;
+  }
+};
+
+export const register = async (userData) => {
+  try {
+    const res = await api.post('/user', userData);
+    return res.data;
+  } catch (error) {
+    console.error('Error registering user:', error);
     throw error;
   }
 };

@@ -34,10 +34,11 @@ function UserPhotos({ userId }) {
   }, [advancedEnabled, indexParam, userId, navigate]);
 
   // Non-advanced mode: fetch all photos of the user
-  const { data: photos = [], isLoading: isLoadingPhotos, isError: isErrorPhotos } = useQuery({
+  const { data: photos = [], isLoading: isLoadingPhotos, isError: isErrorPhotos, error: photosError } = useQuery({
     queryKey: ['photosOfUser', userId],
     queryFn: () => fetchPhotosOfUser(userId),
     enabled: !advancedEnabled && !!userId,
+    retry: false, // Don't retry on error
   });
 
   // Advanced mode: fetch single photo by index
@@ -52,6 +53,7 @@ function UserPhotos({ userId }) {
     queryKey: ['photosOfUser', userId],
     queryFn: () => fetchPhotosOfUser(userId),
     enabled: advancedEnabled && !!userId,
+    retry: false,
   });
   const totalPhotos = allPhotos.length;
 
@@ -87,13 +89,15 @@ function UserPhotos({ userId }) {
   // Loading / error states
   if (!advancedEnabled) {
     if (isLoadingPhotos) return <Typography>Loading photos...</Typography>;
-    if (isErrorPhotos) return <Typography>Error loading photos.</Typography>;
+    if (isErrorPhotos || photos.length === 0) {
+      return <Typography>No photos found.</Typography>;
+    }
   } else {
     if (isLoadingPhoto || isLoadingAllPhotos) {
       return <Typography>Loading photo...</Typography>;
     }
-    if (isErrorPhoto || isErrorAllPhotos) {
-      return <Typography>Error loading photo.</Typography>;
+    if (isErrorPhoto || isErrorAllPhotos || totalPhotos === 0) {
+      return <Typography>No photos found.</Typography>;
     }
   }
 
