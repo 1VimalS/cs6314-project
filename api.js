@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3001',
+  withCredentials: true, // Send cookies for session support
 });
 
 // Users
@@ -62,6 +63,41 @@ export const fetchPhotoOfUserByIndex = async (userId, index) => {
     return res.data;
   } catch (error) {
     console.error('Error fetching photo of user by index:', error);
+    throw error;
+  }
+};
+
+// Authentication
+export const login = async (login_name) => {
+  try {
+    const res = await api.post('/admin/login', { login_name });
+    return res.data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    const res = await api.post('/admin/logout', {});
+    return res.data;
+  } catch (error) {
+    console.error('Error logging out:', error);
+    throw error;
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const res = await api.get('/admin/currentUser');
+    return res.data;
+  } catch (error) {
+    // 401 means not logged in, which is fine
+    if (error.response && error.response.status === 401) {
+      return null;
+    }
+    console.error('Error fetching current user:', error);
     throw error;
   }
 };

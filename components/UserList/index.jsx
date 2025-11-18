@@ -15,11 +15,12 @@ function UserList() {
   // Hook used for programmatic navigation
   const navigate = useNavigate();
 
-  const { advancedEnabled } = useAppStore();
+  const { advancedEnabled, currentUser } = useAppStore();
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
+    enabled: !!currentUser,
   });
 
   const { data: counts = {} } = useQuery({
@@ -27,8 +28,8 @@ function UserList() {
     queryFn: async () => {
       const results = await Promise.all(
         users.map(u => fetchUserCounts(u._id)
-            .then(data => ({ id: u._id, data }))
-            .catch(() => ({ id: u._id, data: { photos: 0, comments: 0 } }))
+          .then(data => ({ id: u._id, data }))
+          .catch(() => ({ id: u._id, data: { photos: 0, comments: 0 } }))
         )
       );
       const map = {};
@@ -71,7 +72,7 @@ function UserList() {
               </ListItem>
               <Divider />
             </div>
-        ))}
+          ))}
       </List>
     </div>
   );

@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import bluebird from "bluebird";
 import express from "express";
+import session from "express-session";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
@@ -28,7 +29,8 @@ const app = express();
 
 // Enable CORS for all routes
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
@@ -52,14 +54,115 @@ const __dirname = dirname(__filename);
 // (http://expressjs.com/en/starter/static-files.html) do all the work for us.
 app.use(express.static(__dirname));
 
+app.use(express.json());
+
+app.use(session({
+  secret: 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
+
 app.get("/", function (request, response) {
   response.send("Simple web server of files from " + __dirname);
 });
 
 /**
- * /test/info - Returns the SchemaInfo object of the database in JSON format.
- *              This is good for testing connectivity with MongoDB.
+ checks if user is logged in
  */
+function requireAuth(request, response, next) {
+  // login/logout endpoints without authentication
+  if (request.path === '/admin/login' || request.path === '/admin/logout') {
+    return next();
+  }
+
+  // Allow access to root route 
+  if (request.path === '/' || request.path.startsWith('/dist/') || request.path.startsWith('/images/')) {
+    return next();
+  }
+
+  // check if user is logged in
+  if (!request.session || !request.session.userId) {
+    return response.status(401).send('Unauthorized');
+  }
+
+  next();
+}
+
+app.use(requireAuth);
+
+/**
+ * logs in a user with login_name
+ */
+app.post('/admin/login', async (request, response) => {
+  try {
+    const { login_name } = request.body;
+
+    if (!login_name) {
+      return response.status(400).send({ error: 'login_name is required' });
+    }
+
+    const user = await User.findOne({ login_name }).lean().exec();
+
+    if (!user) {
+      return response.status(400).send({ error: 'Invalid login_name' });
+    }
+
+    request.session.userId = user._id.toString();
+    request.session.login_name = user.login_name;
+
+    return response.status(200).send({
+      _id: user._id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      login_name: user.login_name
+    });
+  } catch (err) {
+    console.error('Error during login:', err);
+    return response.status(500).send({ error: 'Internal server error' });
+  }
+});
+
+app.post('/admin/logout', async (request, response) => {
+  try {
+    if (!request.session || !request.session.userId) {
+      return response.status(400).send({ error: 'Not logged in' });
+    }
+
+    request.session.destroy((err) => {
+      if (err) {
+        console.error('Error destroying session:', err);
+        return response.status(500).send({ error: 'Internal server error' });
+      }
+      return response.status(200).send({ message: 'Logged out successfully' });
+    });
+  } catch (err) {
+    console.error('Error during logout:', err);
+    return response.status(500).send({ error: 'Internal server error' });
+  }
+});
+
+/**
+ returns the current logged-in user (if any)
+ */
+app.get('/admin/currentUser', async (request, response) => {
+  try {
+    // This route is protected, so if we get here, user is logged in
+    const user = await User.findById(request.session.userId)
+      .select('_id first_name last_name login_name')
+      .lean()
+      .exec();
+
+    if (!user) {
+      return response.status(400).send({ error: 'User not found' });
+    }
+
+    return response.status(200).send(user);
+  } catch (err) {
+    console.error('Error fetching current user:', err);
+    return response.status(500).send({ error: 'Internal server error' });
+  }
+});
 
 app.get('/test/info', async (request, response) => {
   // Read SchemaInfo from MongoDB and return a plain object
@@ -123,7 +226,7 @@ app.get('/user/:id', async (request, response) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return response.status(400).send('Not found');
   }
-  
+
   try {
     const user = await User.findById(id)
       .select('_id first_name last_name location description occupation')
@@ -212,17 +315,17 @@ app.get('/user/:id/comments', async (request, response) => {
 
     // For each photo fetch that uploader’s photo list to find the index.
     const resultPromises = photos.map(async (p) => {
-    const userPhotos = await Photo.find({ user_id: p.user_id })
-      .select('_id')
-      .lean()
-      .exec();
-    
+      const userPhotos = await Photo.find({ user_id: p.user_id })
+        .select('_id')
+        .lean()
+        .exec();
 
-    const indexInUserPhotos = userPhotos.findIndex((up) => String(up._id) === String(p._id)) + 1;
 
-    // Filter down to only this user's comments
-    const userComments = Array.isArray(p.comments)
-      ? p.comments
+      const indexInUserPhotos = userPhotos.findIndex((up) => String(up._id) === String(p._id)) + 1;
+
+      // Filter down to only this user's comments
+      const userComments = Array.isArray(p.comments)
+        ? p.comments
           .filter((c) => String(c.user_id) === String(id))
           .map((c) => ({
             _id: c._id,
@@ -230,8 +333,8 @@ app.get('/user/:id/comments', async (request, response) => {
             date_time: c.date_time,
             user_id: c.user_id,
           }))
-      : [];
-    
+        : [];
+
       return {
         _id: p._id,
         file_name: p.file_name,
@@ -269,7 +372,7 @@ app.get('/photosOfUser/:id', async (request, response) => {
       })
       .lean()
       .exec();
-    
+
     if (!photos.length) {
       return response.status(400).send('No photos found');
     }
@@ -292,7 +395,7 @@ app.get('/photosOfUser/:id', async (request, response) => {
 });
 
 /**
- * URL /photosOfUser/:id/:index - Returns the Photos for User (id) at a specific index. (1 indexed)
+ returns the Photos for User (id) at a specific index. (1 indexed)
  */
 app.get('/photosOfUser/:id/:index', async (request, response) => {
   const id = request.params.id;
@@ -302,11 +405,32 @@ app.get('/photosOfUser/:id/:index', async (request, response) => {
   }
 
   try {
-    const photos = await axios.get(`http://localhost:3001/photosOfUser/${id}`);
-    if (photos.data.length < index || index < 1) {
+    const photos = await Photo.find({ user_id: id })
+      .select('_id user_id comments file_name date_time')
+      .populate({
+        path: 'comments.user_id',
+        select: '_id first_name last_name',
+        model: User
+      })
+      .lean()
+      .exec();
+
+    if (photos.length < index || index < 1) {
       return response.status(400).send('Index out of bounds');
     }
-    return response.status(200).send(photos.data[index - 1]);
+
+    const photo = photos[index - 1];
+    const resultPhoto = {
+      ...photo,
+      comments: photo.comments.map(c => ({
+        _id: c._id,
+        comment: c.comment,
+        date_time: c.date_time,
+        user: c.user_id,
+      })),
+    };
+
+    return response.status(200).send(resultPhoto);
   } catch (err) {
     console.error('Error fetching photos by id:', err);
     return response.status(500).send({ error: 'Internal server error' });
@@ -317,8 +441,8 @@ const server = app.listen(portno, function () {
   const port = server.address().port;
   console.log(
     "Listening at http://localhost:" +
-      port +
-      " exporting the directory " +
-      __dirname
+    port +
+    " exporting the directory " +
+    __dirname
   );
 });
