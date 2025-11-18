@@ -3,14 +3,17 @@ import { useLocation, matchPath } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Switch, FormControlLabel } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser } from '../../api';
+import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
 
-function TopBar({ advancedEnabled, setAdvancedEnabled }) {
+function TopBar() {
   // Hook to access the current route path
   const location = useLocation();
   // Text displayed on the right side of the top bar
   const [topBarText, setTopBarText] = useState('Click on any User Below!');
+
+  const { advancedEnabled, setAdvancedEnabled } = useAppStore();
 
   // Check if the current route matches a user detail or user photos path
   const matchUserDetail = matchPath('/users/:userId', location.pathname);

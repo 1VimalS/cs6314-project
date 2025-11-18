@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,6 +15,8 @@ import UserDetail from './components/UserDetail';
 import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
 import UserComments from './components/UserComments';
+import useAppStore from './store/useAppStore';
+
 
 function UserDetailRoute() {
   const { userId } = useParams();
@@ -23,9 +25,9 @@ function UserDetailRoute() {
   return <UserDetail userId={userId} />;
 }
 
-function UserPhotosRoute({ advancedEnabled }) {
+function UserPhotosRoute() {
   const { userId } = useParams();
-  return <UserPhotos userId={userId} advancedEnabled={advancedEnabled} />;
+  return <UserPhotos userId={userId} />;
 }
 
 function UserCommentsRoute() {
@@ -36,7 +38,14 @@ function UserCommentsRoute() {
 function PhotoShare() {
   const path = window.location.pathname;
   const hasIndexParam = /^\/photos\/[^/]+\/\d+/.test(path);
-  const [advancedEnabled, setAdvancedEnabled] = useState(hasIndexParam);
+  const { advancedEnabled, setAdvancedEnabled } = useAppStore();
+
+  useEffect(() => {
+    // On initial load, set advancedEnabled based on URL
+    if (hasIndexParam && !advancedEnabled) {
+      setAdvancedEnabled(true);
+    }
+  }, []);
 
   return (
     <BrowserRouter>

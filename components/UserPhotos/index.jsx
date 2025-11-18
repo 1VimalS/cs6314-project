@@ -5,13 +5,16 @@ import PropTypes from 'prop-types';
 import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPhotosOfUser, fetchPhotoOfUserByIndex } from '../../api';
+import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
 
-function UserPhotos({ userId, advancedEnabled }) {
+function UserPhotos({ userId }) {
   const navigate = useNavigate();
   const params = useParams();
   const indexParam = params.index ? parseInt(params.index, 10) : null;
+
+  const { advancedEnabled } = useAppStore();
 
   /**
    * Sync the route with the Advanced toggle:
@@ -208,7 +211,6 @@ function UserPhotos({ userId, advancedEnabled }) {
 
 UserPhotos.propTypes = {
   userId: PropTypes.string.isRequired,
-  advancedEnabled: PropTypes.bool.isRequired,
 };
 
 export default UserPhotos;

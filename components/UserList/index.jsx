@@ -8,11 +8,14 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUsers, fetchUserCounts } from '../../api';
+import useAppStore from '../../store/useAppStore';
 import './styles.css';
 
-function UserList({ advancedEnabled = false }) {
+function UserList() {
   // Hook used for programmatic navigation
   const navigate = useNavigate();
+
+  const { advancedEnabled } = useAppStore();
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
