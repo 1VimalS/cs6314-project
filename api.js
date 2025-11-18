@@ -56,13 +56,24 @@ export const fetchPhotosOfUser = async (userId) => {
     throw error;
   }
 };
-  
+
 export const fetchPhotoOfUserByIndex = async (userId, index) => {
   try {
     const res = await api.get(`/photosOfUser/${userId}/${index}`);
     return res.data;
   } catch (error) {
     console.error('Error fetching photo of user by index:', error);
+    throw error;
+  }
+};
+
+// Comments
+export const addComment = async (photoId, comment) => {
+  try {
+    const res = await api.post(`/commentsOfPhoto/${photoId}`, { comment });
+    return res.data;
+  } catch (error) {
+    console.error('Error adding comment:', error);
     throw error;
   }
 };

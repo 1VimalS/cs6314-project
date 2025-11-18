@@ -437,6 +437,73 @@ app.get('/photosOfUser/:id/:index', async (request, response) => {
   }
 });
 
+/**
+ * POST /commentsOfPhoto/:photo_id - Add a comment to a photo
+ */
+app.post('/commentsOfPhoto/:photo_id', async (request, response) => {
+  const photoId = request.params.photo_id;
+
+  if (!mongoose.Types.ObjectId.isValid(photoId)) {
+    return response.status(400).send({ error: 'Invalid photo ID' });
+  }
+
+  if (!request.session || !request.session.userId) {
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  const { comment } = request.body;
+
+  if (!comment || typeof comment !== 'string' || !comment.trim()) {
+    return response.status(400).send({ error: 'Comment cannot be empty' });
+  }
+
+  try {
+    // Find the photo
+    const photo = await Photo.findById(photoId).exec();
+
+    if (!photo) {
+      return response.status(400).send({ error: 'Photo not found' });
+    }
+
+    // Create new comment object
+    const newComment = {
+      comment: comment.trim(),
+      date_time: new Date(),
+      user_id: new mongoose.Types.ObjectId(request.session.userId),
+    };
+
+    // add comment to photo's comments array
+    photo.comments.push(newComment);
+    await photo.save();
+
+    // getetch the updated photo with populated user info
+    const updatedPhoto = await Photo.findById(photoId)
+      .select('_id user_id comments file_name date_time')
+      .populate({
+        path: 'comments.user_id',
+        select: '_id first_name last_name',
+        model: User
+      })
+      .lean()
+      .exec();
+
+    const resultPhoto = {
+      ...updatedPhoto,
+      comments: updatedPhoto.comments.map(c => ({
+        _id: c._id,
+        comment: c.comment,
+        date_time: c.date_time,
+        user: c.user_id,
+      })),
+    };
+
+    return response.status(200).send(resultPhoto);
+  } catch (err) {
+    console.error('Error adding comment:', err);
+    return response.status(500).send({ error: 'Internal server error' });
+  }
+});
+
 const server = app.listen(portno, function () {
   const port = server.address().port;
   console.log(

@@ -1,10 +1,10 @@
-import { React, useEffect } from 'react';
+import { React, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
-import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { fetchPhotosOfUser, fetchPhotoOfUserByIndex } from '../../api';
+import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, TextField, Button, Alert } from '@mui/material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
@@ -13,8 +13,12 @@ function UserPhotos({ userId }) {
   const navigate = useNavigate();
   const params = useParams();
   const indexParam = params.index ? parseInt(params.index, 10) : null;
+  const queryClient = useQueryClient();
 
-  const { advancedEnabled } = useAppStore();
+  const { advancedEnabled, currentUser } = useAppStore();
+  const [commentText, setCommentText] = useState('');
+  const [commentTexts, setCommentTexts] = useState({});
+  const [commentError, setCommentError] = useState('');
 
   /**
    * Sync the route with the Advanced toggle:
@@ -50,6 +54,35 @@ function UserPhotos({ userId }) {
     enabled: advancedEnabled && !!userId,
   });
   const totalPhotos = allPhotos.length;
+
+  // Mutation for adding comments
+  const addCommentMutation = useMutation({
+    mutationFn: ({ photoId, comment }) => addComment(photoId, comment),
+    onSuccess: (updatedPhoto, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
+      queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
+      setCommentError('');
+    },
+    onError: (error) => {
+      if (error.response && error.response.status === 400) {
+        setCommentError(error.response.data?.error || 'Failed to add comment');
+      } else {
+        setCommentError('An error occurred while adding the comment');
+      }
+    },
+  });
+
+  const handleAddComment = (photoId, text) => {
+    const commentToAdd = text || commentText || '';
+    setCommentError('');
+    addCommentMutation.mutate({ photoId, comment: commentToAdd });
+    // Clear the comment text for this photo
+    if (text !== undefined) {
+      setCommentTexts(prev => ({ ...prev, [photoId]: '' }));
+    } else {
+      setCommentText('');
+    }
+  };
 
   // Loading / error states
   if (!advancedEnabled) {
@@ -136,6 +169,41 @@ function UserPhotos({ userId }) {
               </Typography>
             )}
 
+            {currentUser && (
+              <Box sx={{ mt: 3 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Add a comment:
+                </Typography>
+                {commentError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {commentError}
+                  </Alert>
+                )}
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  placeholder="Write your comment here..."
+                  value={commentText}
+                  onChange={(e) => {
+                    setCommentText(e.target.value);
+                    setCommentError('');
+                  }}
+                  disabled={addCommentMutation.isPending}
+                  sx={{ mb: 1 }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleAddComment(photo._id)}
+                  disabled={addCommentMutation.isPending}
+                >
+                  {addCommentMutation.isPending ? 'Adding...' : 'Add Comment'}
+                </Button>
+              </Box>
+            )}
+
             <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
               <Typography variant="caption">{currentIndex} of {totalPhotos}</Typography>
             </Stack>
@@ -153,57 +221,92 @@ function UserPhotos({ userId }) {
     // Only render photos if they exist and the array isn't empty
     photos && photos.length > 0 && (
       <Box>
-      {photos.map((photo_obj) => (
-        <Card key={photo_obj._id} sx={{ mb: 4 }}>
-          {/* Display the photo */}
-          <CardMedia
-            component="img"
-            height="auto"
-            image={`../../images/${photo_obj.file_name}`}
-            alt="User uploaded"
-            sx={{ maxHeight: 300, objectFit: 'contain' }}
-          />
-          <CardContent>
-            {/* Photo upload timestamp */}
-            <Typography variant="caption" color="textSecondary">
-              Uploaded on: {new Date(photo_obj.date_time).toLocaleString()}
-            </Typography>
-
-            {/* Render comments if available */}
-            {photo_obj.comments && photo_obj.comments.length > 0 ? (
-              <>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle1">Comments:</Typography>
-                {photo_obj.comments.map((comment) => (
-                  <Box key={comment._id} sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">
-                      {new Date(comment.date_time).toLocaleString()}
-                    </Typography>
-                    {/* Comment author (links to user profile) */}
-                    <Typography variant="body2">
-                      By:{' '}
-                      <MuiLink
-                        component={Link}
-                        to={`/users/${comment.user._id}`}
-                      >
-                        {comment.user.first_name} {comment.user.last_name}
-                      </MuiLink>
-                    </Typography>
-                    <Typography variant="body1" sx={{ ml: 1 }}>
-                      {comment.comment}
-                    </Typography>
-                  </Box>
-                ))}
-              </>
-            ) : (
-              // Fallback when there are no comments
-              <Typography variant="body2" sx={{ mt: 2 }}>
-                No comments.
+        {photos.map((photo_obj) => (
+          <Card key={photo_obj._id} sx={{ mb: 4 }}>
+            {/* Display the photo */}
+            <CardMedia
+              component="img"
+              height="auto"
+              image={`../../images/${photo_obj.file_name}`}
+              alt="User uploaded"
+              sx={{ maxHeight: 300, objectFit: 'contain' }}
+            />
+            <CardContent>
+              {/* Photo upload timestamp */}
+              <Typography variant="caption" color="textSecondary">
+                Uploaded on: {new Date(photo_obj.date_time).toLocaleString()}
               </Typography>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+
+              {/* Render comments if available */}
+              {photo_obj.comments && photo_obj.comments.length > 0 ? (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="subtitle1">Comments:</Typography>
+                  {photo_obj.comments.map((comment) => (
+                    <Box key={comment._id} sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="textSecondary">
+                        {new Date(comment.date_time).toLocaleString()}
+                      </Typography>
+                      {/* Comment author (links to user profile) */}
+                      <Typography variant="body2">
+                        By:{' '}
+                        <MuiLink
+                          component={Link}
+                          to={`/users/${comment.user._id}`}
+                        >
+                          {comment.user.first_name} {comment.user.last_name}
+                        </MuiLink>
+                      </Typography>
+                      <Typography variant="body1" sx={{ ml: 1 }}>
+                        {comment.comment}
+                      </Typography>
+                    </Box>
+                  ))}
+                </>
+              ) : (
+                // Fallback when there are no comments
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  No comments.
+                </Typography>
+              )}
+
+              {currentUser && (
+                <Box sx={{ mt: 3 }}>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Add a comment:
+                  </Typography>
+                  {commentError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {commentError}
+                    </Alert>
+                  )}
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    placeholder="Write your comment here..."
+                    value={commentTexts[photo_obj._id] || ''}
+                    onChange={(e) => {
+                      setCommentTexts(prev => ({ ...prev, [photo_obj._id]: e.target.value }));
+                      setCommentError('');
+                    }}
+                    disabled={addCommentMutation.isPending}
+                    sx={{ mb: 1 }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleAddComment(photo_obj._id, commentTexts[photo_obj._id])}
+                    disabled={addCommentMutation.isPending}
+                  >
+                    {addCommentMutation.isPending ? 'Adding...' : 'Add Comment'}
+                  </Button>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </Box>
     )
   );
