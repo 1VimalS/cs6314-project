@@ -10,8 +10,9 @@ import mongoose from "mongoose";
 import bluebird from "bluebird";
 import express from "express";
 import session from "express-session";
+import multer from "multer";
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 
 import axios from "axios";
 
@@ -55,6 +56,21 @@ const __dirname = dirname(__filename);
 app.use(express.static(__dirname));
 
 app.use(express.json());
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, join(__dirname, 'images'));
+  },
+  filename: (req, file, cb) => {
+    const ext = file.originalname.split('.').pop();
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000000);
+    const uniqueName = `${timestamp}_${random}.${ext}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({ storage });
 
 app.use(session({
   secret: 'your-secret-key-change-in-production',
@@ -500,6 +516,39 @@ app.post('/commentsOfPhoto/:photo_id', async (request, response) => {
     return response.status(200).send(resultPhoto);
   } catch (err) {
     console.error('Error adding comment:', err);
+    return response.status(500).send({ error: 'Internal server error' });
+  }
+});
+
+/**
+ upload a photo for the current user
+ */
+app.post('/photos/new', upload.single('photo'), async (request, response) => {
+  // Check if user is logged in
+  if (!request.session || !request.session.userId) {
+    return response.status(401).send({ error: 'Unauthorized' });
+  }
+
+  if (!request.file) {
+    return response.status(400).send({ error: 'No file uploaded' });
+  }
+
+  try {
+    const newPhoto = await Photo.create({
+      file_name: request.file.filename,
+      date_time: new Date(),
+      user_id: new mongoose.Types.ObjectId(request.session.userId),
+      comments: [],
+    });
+
+    return response.status(200).send({
+      _id: newPhoto._id,
+      file_name: newPhoto.file_name,
+      date_time: newPhoto.date_time,
+      user_id: newPhoto.user_id,
+    });
+  } catch (err) {
+    console.error('Error uploading photo:', err);
     return response.status(500).send({ error: 'Internal server error' });
   }
 });

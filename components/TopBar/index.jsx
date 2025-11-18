@@ -1,8 +1,8 @@
 import { useEffect, useState, React } from 'react';
 import { useLocation, matchPath, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Switch, FormControlLabel, Button } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { fetchUser, logout } from '../../api';
+import { AppBar, Toolbar, Typography, Switch, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchUser, logout, uploadPhoto } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
@@ -11,8 +11,12 @@ function TopBar() {
   // Hook to access the current route path
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // Text displayed on the right side of the top bar
   const [topBarText, setTopBarText] = useState('Click on any User Below!');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadError, setUploadError] = useState('');
 
   const { advancedEnabled, setAdvancedEnabled, currentUser, setCurrentUser, clearCurrentUser } = useAppStore();
 
@@ -62,6 +66,51 @@ function TopBar() {
     }
   };
 
+  // photo upload mutation
+  const uploadPhotoMutation = useMutation({
+    mutationFn: uploadPhoto,
+    onSuccess: () => {
+      if (currentUser) {
+        queryClient.invalidateQueries({ queryKey: ['photosOfUser', currentUser._id] });
+      }
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setUploadError('');
+      if (currentUser) {
+        navigate(`/photos/${currentUser._id}`);
+      }
+    },
+    onError: (error) => {
+      if (error.response && error.response.status === 400) {
+        setUploadError(error.response.data?.error || 'Failed to upload photo');
+      } else {
+        setUploadError('An error occurred while uploading the photo');
+      }
+    },
+  });
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setUploadError('');
+    }
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) {
+      uploadPhotoMutation.mutate(null);
+      return;
+    }
+    uploadPhotoMutation.mutate(selectedFile);
+  };
+
+  const handleCloseDialog = () => {
+    setUploadDialogOpen(false);
+    setSelectedFile(null);
+    setUploadError('');
+  };
+
   return (
     // The top navigation bar with app name on the left and dynamic text on the right
     <AppBar className="topbar-appBar" position="absolute">
@@ -75,6 +124,14 @@ function TopBar() {
               <Typography variant="h6" color="inherit">
                 Hi {currentUser.first_name}
               </Typography>
+              <Button
+                color="inherit"
+                variant="outlined"
+                onClick={() => setUploadDialogOpen(true)}
+                sx={{ ml: 1 }}
+              >
+                Add Photo
+              </Button>
               <Button
                 color="inherit"
                 variant="outlined"
@@ -117,6 +174,38 @@ function TopBar() {
           )}
         </div>
       </Toolbar>
+
+      <Dialog open={uploadDialogOpen} onClose={handleCloseDialog}>
+        <DialogTitle>Upload Photo</DialogTitle>
+        <DialogContent>
+          {uploadError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {uploadError}
+            </Alert>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            style={{ marginTop: '1rem' }}
+          />
+          {selectedFile && (
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              Selected: {selectedFile.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button
+            onClick={handleUpload}
+            variant="contained"
+            disabled={uploadPhotoMutation.isPending}
+          >
+            {uploadPhotoMutation.isPending ? 'Uploading...' : 'Upload'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AppBar>
   );
 }
