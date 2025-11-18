@@ -6,7 +6,6 @@ const useAppStore = create((set) => ({
 
   // Actions
   setAdvancedEnabled: (enabled) => set({ advancedEnabled: enabled }),
-  toggleAdvancedEnabled: () => set((state) => ({ advancedEnabled: !state.advancedEnabled })),
 }));
 
 export default useAppStore;

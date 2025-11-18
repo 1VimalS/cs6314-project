@@ -52,7 +52,7 @@ function PhotoShare() {
       <div>
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <TopBar advancedEnabled={advancedEnabled} setAdvancedEnabled={setAdvancedEnabled} />
+            <TopBar />
           </Grid>
           <div className="main-topbar-buffer" />
           <Grid item sm={3}>
@@ -64,8 +64,8 @@ function PhotoShare() {
             <Paper className="main-grid-item">
               <Routes>
                 <Route path="/users/:userId" element={<UserDetailRoute />} />
-                <Route path="/photos/:userId" element={<UserPhotosRoute advancedEnabled={advancedEnabled} />} />
-                <Route path="/photos/:userId/:index" element={<UserPhotosRoute advancedEnabled={advancedEnabled} />} />
+                <Route path="/photos/:userId" element={<UserPhotosRoute />} />
+                <Route path="/photos/:userId/:index" element={<UserPhotosRoute />} />
                 <Route path="/comments/:userId" element={<UserCommentsRoute />} />
               </Routes>
             </Paper>
