@@ -133,7 +133,7 @@ export const uploadPhoto = async (file) => {
   try {
     const formData = new FormData();
     if (file) {
-      formData.append('photo', file);
+      formData.append('uploadedphoto', file);
     }
 
     const res = await api.post('/photos/new', formData, {

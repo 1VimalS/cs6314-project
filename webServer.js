@@ -60,11 +60,7 @@ const storage = multer.diskStorage({
     cb(null, join(__dirname, 'images'));
   },
   filename: (req, file, cb) => {
-    const ext = file.originalname.split('.').pop();
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000000);
-    const uniqueName = `${timestamp}_${random}.${ext}`;
-    cb(null, uniqueName);
+    cb(null, file.originalname);
   }
 });
 
@@ -589,7 +585,7 @@ app.post('/commentsOfPhoto/:photo_id', async (request, response) => {
 /**
  upload a photo for the current user
  */
-app.post('/photos/new', upload.single('photo'), async (request, response) => {
+app.post('/photos/new', upload.single('uploadedphoto'), async (request, response) => {
   // Check if user is logged in
   if (!request.session || !request.session.userId) {
     return response.status(401).send({ error: 'Unauthorized' });
