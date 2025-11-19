@@ -1,8 +1,8 @@
 /**
- * Loads the Project 2 demo data into MongoDB using Mongoose.
+ * Loads the Project 3 demo data into MongoDB using Mongoose.
  * Run: node loadDatabase.js (MongoDB must be running locally)
  *
- * Loads into the MongoDB database named 'project2'.
+ * Loads into the MongoDB database named 'project3'.
  * Collections affected: User, Photo, SchemaInfo. Existing data is cleared.
  *
  * Uses Promises for async DB calls.

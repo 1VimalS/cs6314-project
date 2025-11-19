@@ -13,6 +13,7 @@ import session from "express-session";
 import multer from "multer";
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 // ToDO - Your submission should work without this line. Comment out or delete this line for tests and before submission!
 // import models from "./modelData/photoApp.js";
@@ -55,16 +56,7 @@ app.use(express.static(__dirname));
 
 app.use(express.json());
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, join(__dirname, 'images'));
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  }
-});
-
-const upload = multer({ storage });
+const processFormBody = multer({ storage: multer.memoryStorage() }).single('uploadedphoto');
 
 app.use(session({
   secret: 'your-secret-key-change-in-production',
@@ -583,9 +575,9 @@ app.post('/commentsOfPhoto/:photo_id', async (request, response) => {
 });
 
 /**
- upload a photo for the current user
+ * POST /photos/new - Upload a photo for the current user
  */
-app.post('/photos/new', upload.single('uploadedphoto'), async (request, response) => {
+app.post('/photos/new', processFormBody, async (request, response) => {
   // Check if user is logged in
   if (!request.session || !request.session.userId) {
     return response.status(401).send({ error: 'Unauthorized' });
@@ -596,8 +588,13 @@ app.post('/photos/new', upload.single('uploadedphoto'), async (request, response
   }
 
   try {
+    const { originalname, buffer } = request.file;
+    // Write buffer to disk in ./images with the same name the client sent
+    const filePath = join(__dirname, 'images', originalname);
+    await fs.promises.writeFile(filePath, buffer);
+
     const newPhoto = await Photo.create({
-      file_name: request.file.filename,
+      file_name: originalname, // must match what the test passes
       date_time: new Date(),
       user_id: new mongoose.Types.ObjectId(request.session.userId),
       comments: [],
