@@ -1,5 +1,5 @@
 /**
- * Project 2 Express server connected to MongoDB 'project2'.
+ * Project 3 Express server connected to MongoDB 'project3'.
  * Start with: node webServer.js
  * Client uses axios to call these endpoints.
  */

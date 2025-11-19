@@ -1,8 +1,8 @@
 {
-  "name": "project2",
+  "name": "project3",
   "version": "1.0.0",
   "private": true,
-  "description": "Project 2: Appserver and Database (React)",
+  "description": "Project 3: State, Sessions and Input (React + Vite + Axios + TanStack Query + Zustand)",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
