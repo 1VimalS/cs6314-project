@@ -1,11 +1,6 @@
 import { React } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-} from '@mui/material';
+import { Divider, List, ListItem, ListItemText } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUsers, fetchUserCounts } from '../../api';
 import useAppStore from '../../store/useAppStore';

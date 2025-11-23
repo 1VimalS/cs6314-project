@@ -1,15 +1,7 @@
 import { React, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Divider,
-} from '@mui/material';
+import { Box, Card, CardContent, TextField, Button, Typography, Alert, Divider } from '@mui/material';
+import { useMutation } from '@tanstack/react-query';
 import { login, register } from '../../api';
 import useAppStore from '../../store/useAppStore';
 import './styles.css';
@@ -29,34 +21,72 @@ function LoginRegister() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
 
   const navigate = useNavigate();
   const { setCurrentUser } = useAppStore();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setIsLoading(true);
-
-    try {
-      const user = await login(loginName, loginPassword);
+  // LOGIN mutation
+  const loginMutation = useMutation({
+    mutationFn: ({ login_name, password }) => login(login_name, password),
+    onMutate: () => {
+      setError('');
+      setSuccess('');
+    },
+    onSuccess: (user) => {
       setCurrentUser(user);
       navigate(`/users/${user._id}`);
-    } catch (err) {
+    },
+    onError: (err) => {
       if (err.response && err.response.status === 400) {
         setError(err.response.data?.error || 'Invalid login name or password. Please try again.');
       } else {
         setError('An error occurred during login. Please try again.');
       }
-    } finally {
-      setIsLoading(false);
-    }
+    },
+  });
+
+  // REGISTER mutation
+  const registerMutation = useMutation({
+    mutationFn: (userData) => register(userData),
+    onMutate: () => {
+      setError('');
+      setSuccess('');
+    },
+    onSuccess: () => {
+      setSuccess('Registration successful! You can now login.');
+
+      // Clear registration fields
+      setRegLoginName('');
+      setRegPassword('');
+      setRegPasswordConfirm('');
+      setRegFirstName('');
+      setRegLastName('');
+      setRegLocation('');
+      setRegDescription('');
+      setRegOccupation('');
+    },
+    onError: (err) => {
+      if (err.response && err.response.status === 400) {
+        const errorMsg =
+          typeof err.response.data === 'string'
+            ? err.response.data
+            : err.response.data?.error || 'Registration failed. Please check your input and try again.';
+        setError(errorMsg);
+      } else {
+        setError('An error occurred during registration. Please try again.');
+      }
+    },
+  });
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    loginMutation.mutate({
+      login_name: loginName,
+      password: loginPassword,
+    });
   };
 
-  const handleRegister = async (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -66,43 +96,22 @@ function LoginRegister() {
       return;
     }
 
-    setIsRegistering(true);
+    const userData = {
+      login_name: regLoginName,
+      password: regPassword,
+      first_name: regFirstName,
+      last_name: regLastName,
+      location: regLocation,
+      description: regDescription,
+      occupation: regOccupation,
+    };
 
-    try {
-      const userData = {
-        login_name: regLoginName,
-        password: regPassword,
-        first_name: regFirstName,
-        last_name: regLastName,
-        location: regLocation,
-        description: regDescription,
-        occupation: regOccupation,
-      };
-
-      await register(userData);
-
-      setSuccess('Registration successful! You can now login.');
-      setRegLoginName('');
-      setRegPassword('');
-      setRegPasswordConfirm('');
-      setRegFirstName('');
-      setRegLastName('');
-      setRegLocation('');
-      setRegDescription('');
-      setRegOccupation('');
-    } catch (err) {
-      if (err.response && err.response.status === 400) {
-        const errorMsg = typeof err.response.data === 'string'
-          ? err.response.data
-          : (err.response.data?.error || 'Registration failed. Please check your input and try again.');
-        setError(errorMsg);
-      } else {
-        setError('An error occurred during registration. Please try again.');
-      }
-    } finally {
-      setIsRegistering(false);
-    }
+    registerMutation.mutate(userData);
   };
+
+  const isLoggingIn = loginMutation.isPending;
+  const isRegistering = registerMutation.isPending;
+  const isBusy = isLoggingIn || isRegistering;
 
   return (
     <Box className="login-register-container">
@@ -129,7 +138,7 @@ function LoginRegister() {
               value={loginName}
               onChange={(e) => setLoginName(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -140,7 +149,7 @@ function LoginRegister() {
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <Button
@@ -148,9 +157,9 @@ function LoginRegister() {
               fullWidth
               variant="contained"
               color="primary"
-              disabled={isLoading || isRegistering || !loginName.trim() || !loginPassword.trim()}
+              disabled={isBusy || !loginName.trim() || !loginPassword.trim()}
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoggingIn ? 'Logging in...' : 'Login'}
             </Button>
           </form>
 
@@ -168,7 +177,7 @@ function LoginRegister() {
               value={regLoginName}
               onChange={(e) => setRegLoginName(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -179,7 +188,7 @@ function LoginRegister() {
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -190,7 +199,7 @@ function LoginRegister() {
               value={regPasswordConfirm}
               onChange={(e) => setRegPasswordConfirm(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               error={regPasswordConfirm !== '' && regPassword !== regPasswordConfirm}
               helperText={regPasswordConfirm !== '' && regPassword !== regPasswordConfirm ? 'Passwords do not match' : ''}
               sx={{ mb: 2 }}
@@ -202,7 +211,7 @@ function LoginRegister() {
               value={regFirstName}
               onChange={(e) => setRegFirstName(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -212,7 +221,7 @@ function LoginRegister() {
               value={regLastName}
               onChange={(e) => setRegLastName(e.target.value)}
               required
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -221,7 +230,7 @@ function LoginRegister() {
               variant="outlined"
               value={regLocation}
               onChange={(e) => setRegLocation(e.target.value)}
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -230,7 +239,7 @@ function LoginRegister() {
               variant="outlined"
               value={regOccupation}
               onChange={(e) => setRegOccupation(e.target.value)}
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -241,7 +250,7 @@ function LoginRegister() {
               rows={3}
               value={regDescription}
               onChange={(e) => setRegDescription(e.target.value)}
-              disabled={isLoading || isRegistering}
+              disabled={isBusy}
               sx={{ mb: 2 }}
             />
             <Button
@@ -249,7 +258,7 @@ function LoginRegister() {
               fullWidth
               variant="contained"
               color="primary"
-              disabled={isLoading || isRegistering || !regLoginName.trim() || !regPassword.trim() || !regPasswordConfirm.trim() || !regFirstName.trim() || !regLastName.trim() || regPassword !== regPasswordConfirm}
+              disabled={isBusy || !regLoginName.trim() || !regPassword.trim() || !regPasswordConfirm.trim() || !regFirstName.trim() || !regLastName.trim() || regPassword !== regPasswordConfirm}
             >
               {isRegistering ? 'Registering...' : 'Register Me'}
             </Button>
