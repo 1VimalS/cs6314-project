@@ -2,6 +2,7 @@ import SchemaInfo from '../schema/schemaInfo.js';
 import User from '../schema/user.js';
 import Photo from '../schema/photo.js';
 
+// Returns the SchemaInfo document.
 export async function getInfo(req, res) {
     try {
         const info = await SchemaInfo.findOne().lean().exec();

@@ -9,6 +9,7 @@ import requireAuth from "./middleware/auth.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Connect to MongoDB
 try {
   await connectDB();
 } catch (err) {
@@ -16,6 +17,7 @@ try {
   process.exit(1);
 }
 
+// Set up Express app
 const portno = 3001;
 const app = express();
 app.use(express.json());
@@ -48,6 +50,7 @@ app.use(requireAuth);
 // Load all main routes
 app.use('/', routes);
 
+// Start the server
 const server = app.listen(portno, function () {
   const port = server.address().port;
   console.log(

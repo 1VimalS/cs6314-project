@@ -1,5 +1,6 @@
 import User from "../schema/user.js";
 
+// login user
 export async function login(req, res) {
   try {
     const { login_name, password } = req.body;
@@ -28,6 +29,7 @@ export async function login(req, res) {
   }
 }
 
+// logout user
 export async function logout(req, res) {
   if (!req.session?.userId) {
     return res.status(400).send({ error: "Not logged in" });
@@ -39,6 +41,7 @@ export async function logout(req, res) {
   });
 }
 
+// get current logged-in user
 export async function currentUser(req, res) {
   try {
     const user = await User.findById(req.session.userId)

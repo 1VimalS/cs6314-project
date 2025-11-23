@@ -7,9 +7,11 @@ import useAppStore from '../../store/useAppStore';
 import './styles.css';
 
 function LoginRegister() {
+  // Login form state
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Registration form state
   const [regLoginName, setRegLoginName] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
@@ -19,6 +21,7 @@ function LoginRegister() {
   const [regDescription, setRegDescription] = useState('');
   const [regOccupation, setRegOccupation] = useState('');
 
+  // Feedback messages
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -34,7 +37,7 @@ function LoginRegister() {
     },
     onSuccess: (user) => {
       setCurrentUser(user);
-      navigate(`/users/${user._id}`);
+      navigate(`/`);
     },
     onError: (err) => {
       if (err.response && err.response.status === 400) {
@@ -77,6 +80,8 @@ function LoginRegister() {
       }
     },
   });
+
+  // Handlers
 
   const handleLogin = (e) => {
     e.preventDefault();

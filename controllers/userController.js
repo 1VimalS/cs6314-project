@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import User from "../schema/user.js";
 import Photo from "../schema/photo.js";
 
+// register a new user
 export async function register(req, res) {
     try {
     const { login_name, password, first_name, last_name, location, description, occupation } = req.body;
@@ -52,6 +53,7 @@ export async function register(req, res) {
   }
 }
 
+// Returns a list of all users with limited fields.
 export async function list(req, res) {
   try {
     const users = await User.find({}).select('_id first_name last_name').lean().exec();
@@ -62,6 +64,7 @@ export async function list(req, res) {
   }
 }
 
+// Returns user details by user ID with selected fields.
 export async function userById(req, res) {
     const id = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -134,6 +137,7 @@ export async function userCountsbyId(req, res) {
   }
 }
 
+// Returns photos with comments made by the user identified by user ID.
 export async function userCommentsById(req, res) {
     const id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(id)) {

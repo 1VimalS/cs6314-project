@@ -22,7 +22,6 @@ import { getCurrentUser } from './api';
 
 function UserDetailRoute() {
   const { userId } = useParams();
-  // eslint-disable-next-line no-console
   console.log('UserDetailRoute: userId is:', userId);
   return (
     <ProtectedRoute>
@@ -63,8 +62,10 @@ function ProtectedRoute({ children }) {
 }
 
 function PhotoShare() {
+  // check if URL has /photos/:userId/:index pattern
   const path = window.location.pathname;
   const hasIndexParam = /^\/photos\/[^/]+\/\d+/.test(path);
+  // get state and actions from store
   const { advancedEnabled, setAdvancedEnabled, currentUser, setCurrentUser } = useAppStore();
 
   useEffect(() => {
@@ -111,6 +112,7 @@ function PhotoShare() {
                     <Route path="/photos/:userId" element={<UserPhotosRoute />} />
                     <Route path="/photos/:userId/:index" element={<UserPhotosRoute />} />
                     <Route path="/comments/:userId" element={<UserCommentsRoute />} />
+                    {/* Default route to current user's detail */}
                     <Route path="/" element={<Navigate to={`/users/${currentUser._id}`} replace />} />
                   </Routes>
                 </Paper>
@@ -121,7 +123,7 @@ function PhotoShare() {
               <Paper className="main-grid-item">
                 <Routes>
                   <Route path="/" element={<LoginRegister />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<LoginRegister />} />
                 </Routes>
               </Paper>
             </Grid>

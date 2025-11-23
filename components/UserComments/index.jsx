@@ -13,12 +13,14 @@ function UserComments({ userId: propUserId }) {
   const userId = propUserId || params.userId;
   const navigate = useNavigate();
 
+  // Fetch user comments
   const { data: items = [], isLoading, isError } = useQuery({
     queryKey: ['userComments', userId],
     queryFn: () => fetchUserComments(userId),
     enabled: !!userId,
   });
 
+  // Handler to navigate to photo detail
   const goToPhoto = (photo) => {
     const ownerId = (photo.user_id && photo.user_id._id) || photo.user_id || '';
     navigate(`/photos/${ownerId}/${photo.index}`);
