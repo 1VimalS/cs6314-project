@@ -63,6 +63,8 @@ function UserPhotos({ userId }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
       queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
+      queryClient.invalidateQueries({ queryKey: ['userCounts'] });
+      queryClient.invalidateQueries({ queryKey: ['userComments', userId] });
       setCommentError('');
     },
     onError: (error) => {
