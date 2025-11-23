@@ -75,6 +75,7 @@ function TopBar() {
     onSuccess: () => {
       if (currentUser) {
         queryClient.invalidateQueries({ queryKey: ['photosOfUser', currentUser._id] });
+        queryClient.invalidateQueries({ queryKey: ['userCounts'] });
       }
       setUploadDialogOpen(false);
       setSelectedFile(null);
