@@ -85,7 +85,6 @@ export const fetchPhotoOfUserByIndex = async (userId, index) => {
 // Comments
 export const addComment = async (photoId, comment, mentions = []) => {
   try {
-    console.log("DEBUG: api.js: mentions = ", mentions);
     const res = await api.post(`/commentsOfPhoto/${photoId}`, { comment, mentions });
     return res.data;
   } catch (error) {
