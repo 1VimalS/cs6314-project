@@ -22,7 +22,6 @@ import { getCurrentUser } from './api';
 
 function UserDetailRoute() {
   const { userId } = useParams();
-  console.log('UserDetailRoute: userId is:', userId);
   return (
     <ProtectedRoute>
       <UserDetail userId={userId} />

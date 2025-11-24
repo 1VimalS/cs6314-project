@@ -33,11 +33,13 @@ export default async function newPhotoUpload(req, res) {
       // Ensure images directory exists
       await fs.promises.mkdir(IMAGES_DIR, { recursive: true });
       // Write buffer to disk in ./images with the same name the client sent
-      const filePath = join(IMAGES_DIR, originalname);
+      const timestamp = new Date().valueOf();
+      const fileName = 'U' + String(timestamp) + originalname;
+      const filePath = join(IMAGES_DIR, fileName);
       await fs.promises.writeFile(filePath, buffer);
   
       const newPhoto = await Photo.create({
-        file_name: originalname, // must match what the test passes
+        file_name: fileName,
         date_time: new Date(),
         user_id: new mongoose.Types.ObjectId(req.session.userId),
         comments: [],
