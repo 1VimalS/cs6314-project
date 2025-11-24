@@ -46,6 +46,16 @@ export const fetchUserComments = async (userId) => {
   }
 };
 
+export const fetchUserMentions = async (userId) => {
+  try {
+    const res = await api.get(`/user/${userId}/mentions`);
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching user mentions:', error);
+    throw error;
+  }
+};
+
 // Photos
 export const fetchPhotosOfUser = async (userId) => {
   try {
@@ -73,9 +83,10 @@ export const fetchPhotoOfUserByIndex = async (userId, index) => {
 };
 
 // Comments
-export const addComment = async (photoId, comment) => {
+export const addComment = async (photoId, comment, mentions = []) => {
   try {
-    const res = await api.post(`/commentsOfPhoto/${photoId}`, { comment });
+    console.log("DEBUG: api.js: mentions = ", mentions);
+    const res = await api.post(`/commentsOfPhoto/${photoId}`, { comment, mentions });
     return res.data;
   } catch (error) {
     console.error('Error adding comment:', error);

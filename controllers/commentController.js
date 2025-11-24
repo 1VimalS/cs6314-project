@@ -14,7 +14,7 @@ export default async function newComment(req, res) {
     return res.status(401).send({ error: 'Unauthorized' });
   }
 
-  const { comment } = req.body;
+  const { comment, mentions = [] } = req.body;
 
   if (!comment || typeof comment !== 'string' || !comment.trim()) {
     return res.status(400).send({ error: 'Comment cannot be empty' });
@@ -28,11 +28,16 @@ export default async function newComment(req, res) {
       return res.status(400).send({ error: 'Photo not found' });
     }
 
+    const mentionObjectIds = mentions
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
     // Create new comment object
     const createdComment = {
       comment: comment.trim(),
       date_time: new Date(),
       user_id: new mongoose.Types.ObjectId(req.session.userId),
+      mentions: mentionObjectIds,
     };
 
     // add comment to photo's comments array

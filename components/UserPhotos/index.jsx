@@ -2,9 +2,10 @@ import { React, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
-import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, TextField, Button, Alert } from '@mui/material';
+import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, Button, Alert } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment } from '../../api';
+import { MentionsInput, Mention } from 'react-mentions';
+import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment, fetchUsers } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
@@ -16,8 +17,17 @@ function UserPhotos({ userId }) {
   const queryClient = useQueryClient();
 
   const { advancedEnabled, currentUser } = useAppStore();
-  const [commentText, setCommentText] = useState('');
-  const [commentTexts, setCommentTexts] = useState({});
+  // mentions states for non-advanced mode
+  const [advancedMentions, setAdvancedMentions] = useState([]);
+  const [commentValue, setCommentValue] = useState('');
+  const [commentPlainText, setCommentPlainText] = useState('');
+  
+
+  // mentions states for advanced mode
+  const [commentMentions, setCommentMentions] = useState({});
+  const [commentValues, setCommentValues] = useState({});
+  const [commentPlainTexts, setCommentPlainTexts] = useState('');
+
   const [commentError, setCommentError] = useState('');
 
   /**
@@ -59,11 +69,12 @@ function UserPhotos({ userId }) {
 
   // Mutation for adding comments
   const addCommentMutation = useMutation({
-    mutationFn: ({ photoId, comment }) => addComment(photoId, comment),
+    mutationFn: ({ photoId, comment, mentions }) => addComment(photoId, comment, mentions),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
       queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
       queryClient.invalidateQueries({ queryKey: ['userCounts'] });
+      queryClient.invalidateQueries({ queryKey: ['userMentions'] });
       setCommentError('');
     },
     onError: (error) => {
@@ -75,16 +86,61 @@ function UserPhotos({ userId }) {
     },
   });
 
-  const handleAddComment = (photoId, text) => {
-    const commentToAdd = text || commentText || '';
-    setCommentError('');
-    addCommentMutation.mutate({ photoId, comment: commentToAdd });
-    // Clear the comment text for this photo
-    if (text !== undefined) {
-      setCommentTexts(prev => ({ ...prev, [photoId]: '' }));
-    } else {
-      setCommentText('');
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    enabled: !!currentUser
+  });
+
+  const mentionUsers = allUsers.map((u) => ({
+    id: u._id,
+    display: `${u.first_name} ${u.last_name}`,
+  }));
+
+  const handleAddComment = ({ photoId, text, mentions }) => {
+    mentions.forEach((m, i) => {
+      console.log(`Mention ${i}: id=${m.id}, display=${m.display}`);
+    });
+
+    const commentToAdd = text || '';
+    if (!commentToAdd) {
+      setCommentError('Comment cannot be empty');
+      return;
     }
+    const mentionsArray = mentions
+    ?? (photoId ? commentMentions[photoId] : advancedMentions)
+    ?? [];
+
+    advancedMentions.forEach(element => {
+      console.log(`Mention: id=${element.id}, display=${element.display}`);
+    });
+
+    mentionsArray.forEach(element => {
+      console.log(`Mention: id=${element.id}, display=${element.display}`);
+    });
+
+    const mentionIds = mentionsArray.map((m) => m.id);
+    
+    console.log("DEBUG 4: " + mentionIds);
+
+    setCommentError('');
+    addCommentMutation.mutate(
+      { photoId, comment: commentToAdd, mentions: mentionIds },
+      {
+        onSuccess: () => {
+          // Clear comment input after successful addition
+          if (advancedEnabled) {
+            setCommentValue('');
+            setCommentPlainText('');
+            setAdvancedMentions([]);
+          } else {
+            setCommentValues((prev) => ({ ...prev, [photoId]: '' }));
+            setCommentPlainTexts((prev) => ({ ...prev, [photoId]: '' }));
+            setCommentMentions((prev) => ({ ...prev, [photoId]: [] }));
+          }
+        },
+      }
+    );
   };
 
   // Loading / error states
@@ -185,23 +241,40 @@ function UserPhotos({ userId }) {
                     {commentError}
                   </Alert>
                 )}
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  placeholder="Write your comment here..."
-                  value={commentText}
-                  onChange={(e) => {
-                    setCommentText(e.target.value);
+
+                <MentionsInput
+                  className="mentions-input mui-mentions"
+                  value={commentValue}
+                  onChange={(event, newValue, newPlainTextValue, mentions) => {
+                    setCommentValue(newValue);
+                    setCommentPlainText(newPlainTextValue);
+                    console.log("DEBUG ONCHANGE: mentions = ", mentions);
+                    setAdvancedMentions(mentions || []);
                     setCommentError('');
                   }}
+                  placeholder="Write your comment here... Use @ to mention users."
                   disabled={addCommentMutation.isPending}
-                  sx={{ mb: 1 }}
-                />
+                >
+                  <Mention
+                    trigger="@"
+                    data={mentionUsers}
+                    displayTransform={(id, display) => `@${display}`}
+                    renderSuggestion={(entry, search, highlightedDisplay, index, focused) => (
+                      <div className={`mui-mention-item ${focused ? "focused" : ""}`}>
+                        <div className="mui-mention-text">{highlightedDisplay}</div>
+                      </div>
+                    )}
+                  />
+                </MentionsInput>
+
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={() => handleAddComment(photo._id)}
+                  onClick={() => handleAddComment({
+                    photoId: photo._id,
+                    text: commentPlainText,
+                    mentions: advancedMentions,
+                  })}
                   disabled={addCommentMutation.isPending}
                 >
                   {addCommentMutation.isPending ? 'Adding...' : 'Add Comment'}
@@ -286,23 +359,47 @@ function UserPhotos({ userId }) {
                       {commentError}
                     </Alert>
                   )}
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    placeholder="Write your comment here..."
-                    value={commentTexts[photo_obj._id] || ''}
-                    onChange={(e) => {
-                      setCommentTexts(prev => ({ ...prev, [photo_obj._id]: e.target.value }));
+
+                  <MentionsInput
+                    className="mentions-input mui-mentions"
+                    value={commentValues[photo_obj._id] || ''}
+                    onChange={(event, newValue, newPlainTextValue, mentions) => {
+                      setCommentValues((prev) => ({
+                        ...prev,
+                        [photo_obj._id]: newValue,
+                      }));
+                      setCommentPlainTexts((prev) => ({
+                        ...prev,
+                        [photo_obj._id]: newPlainTextValue,
+                      }));
+                      setCommentMentions((prev) => ({
+                        ...prev,
+                        [photo_obj._id]: mentions || [],
+                      }));
                       setCommentError('');
                     }}
-                    disabled={addCommentMutation.isPending}
-                    sx={{ mb: 1 }}
-                  />
+                    placeholder="Write your comment here... Use @ to mention users."
+                  >
+                    <Mention
+                      trigger="@"
+                      data={mentionUsers}
+                      displayTransform={(id, display) => `@${display}`}
+                      renderSuggestion={(entry, search, highlightedDisplay, index, focused) => (
+                      <div className={`mui-mention-item ${focused ? "focused" : ""}`}>
+                        <div className="mui-mention-text">{highlightedDisplay}</div>
+                      </div>
+                    )}
+                    />
+                  </MentionsInput>
+
                   <Button
                     variant="contained"
                     color="primary"
-                    onClick={() => handleAddComment(photo_obj._id, commentTexts[photo_obj._id])}
+                    onClick={() => handleAddComment({
+                      photoId: photo_obj._id,
+                      text: commentPlainTexts[photo_obj._id],
+                      mentions: commentMentions[photo_obj._id] || [],
+                    })}
                     disabled={addCommentMutation.isPending}
                   >
                     {addCommentMutation.isPending ? 'Adding...' : 'Add Comment'}

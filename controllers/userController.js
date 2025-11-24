@@ -190,3 +190,70 @@ export async function userCommentsById(req, res) {
     return res.status(500).send({ error: 'Internal server error' });
   }
 }
+
+// Returns photos with comments that mention the user identified by user ID.
+export async function userMentionsById(req, res) {
+  const id = req.params.id;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).send('Not found');
+  }
+
+  try {
+    const userObjectId = new mongoose.Types.ObjectId(id);
+
+    // Find photos that have at least one comment mentioning this user
+    const photos = await Photo.find({ 'comments.mentions': userObjectId })
+      .select('_id file_name date_time user_id comments')
+      .populate({
+        path: 'user_id', // photo owner
+        select: '_id first_name last_name',
+        model: User,
+      })
+      .lean()
+      .exec();
+
+    const resultPromises = photos.map(async (p) => {
+      // For each photo, get its index in the owner's photos (1-indexed)
+      const ownerId = (p.user_id && p.user_id._id) || p.user_id;
+      const userPhotos = await Photo.find({ user_id: ownerId })
+        .select('_id')
+        .lean()
+        .exec();
+
+      const indexInUserPhotos = userPhotos.findIndex(
+        (up) => String(up._id) === String(p._id),
+      ) + 1;
+
+      // Only keep comments that actually mention this user
+      const mentionedComments = Array.isArray(p.comments)
+        ? p.comments
+            .filter((c) => (c.mentions || []).some(
+                (mId) => String(mId) === String(userObjectId),
+              )
+            )
+            .map((c) => ({
+              _id: c._id,
+              comment: c.comment,
+              date_time: c.date_time,
+              user_id: c.user_id,
+            }))
+        : [];
+
+      return {
+        _id: p._id,
+        file_name: p.file_name,
+        date_time: p.date_time,
+        owner: p.user_id,   // populated owner
+        index: indexInUserPhotos,
+        comments: mentionedComments,
+      };
+    });
+
+    const result = await Promise.all(resultPromises);
+    return res.status(200).send(result);
+  } catch (err) {
+    console.error('Error fetching mention-photos for user:', err);
+    return res.status(500).send({ error: 'Internal server error' });
+  }
+}

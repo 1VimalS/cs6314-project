@@ -1,0 +1,56 @@
+.mui-mentions textarea {
+  font-family: "Roboto", sans-serif !important;
+  font-size: 14px;
+  padding: 10px !important;
+  border-radius: 6px;
+  border: 1px solid #ccc !important;
+  outline: none;
+  min-height: 80px;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mentions-input {
+  width: 90%;
+  min-height: 80px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-family: inherit;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.mui-mentions textarea:focus {
+  border-color: #1976d2 !important; /* MUI primary color */
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.25);
+}
+
+.mui-mentions .mentions__suggestions__list {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.mui-mention-item {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  font-family: "Roboto", sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mui-mention-item:hover,
+.mui-mention-item.focused {
+  background-color: #f0f7ff;
+}
+
+.mui-mentions .mentions__mention {
+  color: #1976d2;
+  font-weight: 600;
+}
+
