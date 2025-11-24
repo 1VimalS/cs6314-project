@@ -79,7 +79,6 @@ function PhotoShare() {
         }
       } catch (err) {
         // User is not logged in, which is fine
-        console.log('No active session');
       }
     };
 
