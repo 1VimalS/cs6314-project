@@ -25,7 +25,7 @@ export async function register(req, res) {
 
     const existingUser = await User.findOne({ login_name }).lean().exec();
     if (existingUser) {
-      return res.status(400).send('login_name already exists');
+      return res.status(400).send('Login Name already exists');
     }
 
     const newUser = await User.create({
