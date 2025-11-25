@@ -2,9 +2,11 @@ import express from "express";
 import session from "express-session";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import http from 'http';
 import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import requireAuth from "./middleware/auth.js";
+import { initIo } from "./socket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,13 +52,37 @@ app.use(requireAuth);
 // Load all main routes
 app.use('/', routes);
 
+// Create HTTP server and attach Socket.IO
+const server = http.createServer(app);
+const io = initIo(server);
+
+// Configure socket rooms for watching user mentions
+io.on('connection', (socket) => {
+  console.log('Socket connected:', socket.id);
+
+  socket.on('watchUserMentions', ({ userId }) => {
+    if (!userId) return;
+    socket.join(`user:${userId}`);
+    console.log(`Socket ${socket.id} joined room user:${userId}`);
+  });
+
+  socket.on('unwatchUserMentions', ({ userId }) => {
+    if (!userId) return;
+    socket.leave(`user:${userId}`);
+    console.log(`Socket ${socket.id} left room user:${userId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
+
 // Start the server
-const server = app.listen(portno, function () {
-  const port = server.address().port;
+server.listen(portno, () => {
   console.log(
     "Listening at http://localhost:" +
-    port +
-    " exporting the directory " +
-    __dirname
+      portno +
+      " exporting the directory " +
+      __dirname
   );
 });

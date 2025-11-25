@@ -98,10 +98,6 @@ function UserPhotos({ userId }) {
   }));
 
   const handleAddComment = ({ photoId, text, mentions }) => {
-    mentions.forEach((m, i) => {
-      console.log(`Mention ${i}: id=${m.id}, display=${m.display}`);
-    });
-
     const commentToAdd = text || '';
     if (!commentToAdd) {
       setCommentError('Comment cannot be empty');
@@ -111,17 +107,7 @@ function UserPhotos({ userId }) {
     ?? (photoId ? commentMentions[photoId] : advancedMentions)
     ?? [];
 
-    advancedMentions.forEach(element => {
-      console.log(`Mention: id=${element.id}, display=${element.display}`);
-    });
-
-    mentionsArray.forEach(element => {
-      console.log(`Mention: id=${element.id}, display=${element.display}`);
-    });
-
     const mentionIds = mentionsArray.map((m) => m.id);
-    
-    console.log("DEBUG 4: " + mentionIds);
 
     setCommentError('');
     addCommentMutation.mutate(
@@ -248,7 +234,6 @@ function UserPhotos({ userId }) {
                   onChange={(event, newValue, newPlainTextValue, mentions) => {
                     setCommentValue(newValue);
                     setCommentPlainText(newPlainTextValue);
-                    console.log("DEBUG ONCHANGE: mentions = ", mentions);
                     setAdvancedMentions(mentions || []);
                     setCommentError('');
                   }}

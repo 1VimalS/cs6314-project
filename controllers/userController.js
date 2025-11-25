@@ -220,10 +220,7 @@ export async function userMentionsById(req, res) {
         .select('_id')
         .lean()
         .exec();
-
-      const indexInUserPhotos = userPhotos.findIndex(
-        (up) => String(up._id) === String(p._id),
-      ) + 1;
+      const indexInUserPhotos = userPhotos.findIndex((up) => String(up._id) === String(p._id),) + 1;
 
       // Only keep comments that actually mention this user
       const mentionedComments = Array.isArray(p.comments)
@@ -239,14 +236,23 @@ export async function userMentionsById(req, res) {
               user_id: c.user_id,
             }))
         : [];
-
+      
+      // include the latest comment that mentioned this user
+      let latestMentionComment = null;
+      if (mentionedComments.length > 0) {
+        latestMentionComment = mentionedComments.reduce((latest, current) => {
+          return !latest || new Date(current.date_time) > new Date(latest.date_time) ? current : latest;
+        }, mentionedComments[0]);
+      }
+      
       return {
         _id: p._id,
         file_name: p.file_name,
         date_time: p.date_time,
         owner: p.user_id,   // populated owner
         index: indexInUserPhotos,
-        comments: mentionedComments,
+        comment: latestMentionComment?.comment || null,
+        comment_date_time: latestMentionComment?.date_time || null,
       };
     });
 

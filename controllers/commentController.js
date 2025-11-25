@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Photo from "../schema/photo.js";
 import User from "../schema/user.js";
+import { getIo } from "../socket.js";
 
 // Add a comment to a photo
 export default async function newComment(req, res) {
@@ -44,7 +45,7 @@ export default async function newComment(req, res) {
     photo.comments.push(createdComment);
     await photo.save();
 
-    // getetch the updated photo with populated user info
+    // fetch the updated photo with populated user info
     const updatedPhoto = await Photo.findById(photoId)
       .select('_id user_id comments file_name date_time')
       .populate({
@@ -54,7 +55,7 @@ export default async function newComment(req, res) {
       })
       .lean()
       .exec();
-
+    
     const resultPhoto = {
       ...updatedPhoto,
       comments: updatedPhoto.comments.map(c => ({
@@ -64,6 +65,36 @@ export default async function newComment(req, res) {
         user: c.user_id,
       })),
     };
+
+    // Real-time: emit mention events to each mentioned user
+    const io = getIo();
+    if (io && mentionObjectIds.length > 0) {
+      // Fetch owner (photo uploader)
+      const owner = await User.findById(photo.user_id)
+        .select('_id first_name last_name')
+        .lean()
+        .exec();
+      
+      // Compute index of this photo in owner's photo list (like userCommentsById)
+      const userPhotos = await Photo.find({ user_id: photo.user_id })
+        .select('_id')
+        .lean()
+        .exec();
+      const indexInUserPhotos = userPhotos.findIndex(p => p._id.toString() === photo._id.toString()) + 1;
+
+      // Payload shape should match fetchUserMentions()
+      const mentionPayload = {
+        _id: photo._id,
+        file_name: photo.file_name,
+        date_time: photo.date_time,
+        owner: owner,
+        index: indexInUserPhotos,
+      };
+
+      mentionObjectIds.forEach((mentionedUserId) => {
+        io.to(`user:${mentionedUserId.toString()}`).emit('mention:new', mentionPayload);
+      });
+    }
 
     return res.status(200).send(resultPhoto);
   } catch (err) {

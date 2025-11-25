@@ -14,11 +14,6 @@ const IMAGES_DIR = join(ROOT_DIR, 'images');
 
 // Upload a photo for the current user
 export default async function newPhotoUpload(req, res) {
-  console.log('upload hit:', {
-    userId: req.session && req.session.userId,
-    file: req.file && req.file.originalname
-  });
-
   // Check if user is logged in
     if (!req.session || !req.session.userId) {
       return res.status(401).send({ error: 'Unauthorized' });
