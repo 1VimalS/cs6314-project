@@ -1,5 +1,5 @@
 import express from "express";
-import { register, list, userById, userCountsbyId, userCommentsById, userMentionsById } from "../controllers/userController.js";
+import { register, list, userById, userCountsbyId, userCommentsById, userMentionsById, deleteUser } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -9,5 +9,6 @@ router.get("/:id", userById);
 router.get('/:id/counts', userCountsbyId);
 router.get('/:id/comments', userCommentsById);
 router.get('/:id/mentions', userMentionsById);
+router.delete('/:id', deleteUser);
 
 export default router;

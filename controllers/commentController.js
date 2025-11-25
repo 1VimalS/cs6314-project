@@ -4,7 +4,7 @@ import User from "../schema/user.js";
 import { getIo } from "../socket.js";
 
 // Add a comment to a photo
-export default async function newComment(req, res) {
+export async function addComment(req, res) {
   const photoId = req.params.photo_id;
 
   if (!mongoose.Types.ObjectId.isValid(photoId)) {
@@ -100,5 +100,49 @@ export default async function newComment(req, res) {
   } catch (err) {
     console.error('Error adding comment:', err);
     return res.status(500).send({ error: 'Internal server error' });
+  }
+}
+
+// Delete a comment from a photo
+export async function deleteComment(req, res) {
+  const { photo_id, comment_id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(photo_id) ||
+      !mongoose.Types.ObjectId.isValid(comment_id)) {
+    return res.status(400).send({ error: "Invalid IDs" });
+  }
+
+  try {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).send({ error: "Unauthorized" });
+    }
+
+    const photo = await Photo.findOne(
+      { _id: photo_id, "comments._id": comment_id },
+      { "comments.$": 1 } // only matched comment
+    ).lean().exec();
+
+    if (!photo || !photo.comments || photo.comments.length === 0) {
+      return res.status(400).send({ error: "Comment not found" });
+    }
+
+    const comment = photo.comments[0];
+
+    // Only the comment author may delete
+    if (String(comment.user_id) !== String(userId)) {
+      return res.status(403).send({ error: "You do not own this comment" });
+    }
+
+    // Remove the comment from the photo
+    await Photo.updateOne(
+      { _id: photo_id },
+      { $pull: { comments: { _id: comment_id } } }
+    ).exec();
+
+    return res.status(200).send({ message: "Comment deleted" });
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    return res.status(500).send({ error: "Internal server error" });
   }
 }

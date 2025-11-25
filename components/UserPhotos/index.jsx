@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, Button, Alert } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MentionsInput, Mention } from 'react-mentions';
-import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment, fetchUsers } from '../../api';
+import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment, fetchUsers, deletePhoto, deleteComment } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
@@ -86,6 +86,46 @@ function UserPhotos({ userId }) {
     },
   });
 
+  // Mutation for deleting photos
+  const deletePhotoMutation = useMutation({
+    mutationFn: (photoId) => deletePhoto(photoId),
+    onSuccess: () => {
+      // Refetch photos and user counts
+      queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
+      queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
+      queryClient.invalidateQueries({ queryKey: ['userCounts'] });
+
+      // Simple navigation after delete
+      if (advancedEnabled) {
+        // Go to previous index if possible, else base photos page
+        if (indexParam && indexParam > 1) {
+          navigate(`/photos/${userId}/${indexParam - 1}`);
+        } else {
+          navigate(`/photos/${userId}`);
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('Error deleting photo:', error);
+      setCommentError('Failed to delete photo');
+    },
+  });
+
+  // Mutation for deleting comments
+  const deleteCommentMutation = useMutation({
+    mutationFn: ({ photoId, commentId }) => deleteComment(photoId, commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['photosOfUser', userId] });
+      queryClient.invalidateQueries({ queryKey: ['photoOfUserByIndex', userId, indexParam] });
+      queryClient.invalidateQueries({ queryKey: ['userCounts'] });
+      setCommentError('');
+    },
+    onError: (error) => {
+      console.error('Error deleting comment:', error);
+      setCommentError('Failed to delete comment');
+    },
+  });
+
   const { data: allUsers = [] } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
@@ -127,6 +167,20 @@ function UserPhotos({ userId }) {
         },
       }
     );
+  };
+
+  const handleDeletePhoto = (photoId) => {
+    if (!window.confirm('Are you sure you want to delete this photo and all its comments?')) {
+      return;
+    }
+    deletePhotoMutation.mutate(photoId);
+  };
+
+  const handleDeleteComment = (photoId, commentId) => {
+    if (!window.confirm('Delete this comment?')) {
+      return;
+    }
+    deleteCommentMutation.mutate({ photoId, commentId });
   };
 
   // Loading / error states
@@ -191,6 +245,21 @@ function UserPhotos({ userId }) {
               Uploaded on: {new Date(photo.date_time).toLocaleString()}
             </Typography>
 
+            {/* Delete photo button if current user is the owner */}
+            {currentUser && String(photo.user_id) === String(currentUser._id) && (
+              <Box sx={{ mt: 1 }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  onClick={() => handleDeletePhoto(photo._id)}
+                  disabled={deletePhotoMutation.isPending}
+                >
+                  {deletePhotoMutation.isPending ? 'Deleting...' : 'Delete Photo'}
+                </Button>
+              </Box>
+            )}
+
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle1">Comments:</Typography>
             {photo.comments && photo.comments.length > 0 ? (
@@ -208,6 +277,18 @@ function UserPhotos({ userId }) {
                   <Typography variant="body1" sx={{ ml: 1 }}>
                     {comment.comment}
                   </Typography>
+
+                  {/* Delete comment button for the author */}
+                  {currentUser && comment.user._id === currentUser._id && (
+                    <Button
+                      size="small"
+                      color="error"
+                      sx={{ mt: 0.5, ml: 1 }}
+                      onClick={() => handleDeleteComment(photo._id, comment._id)}
+                    >
+                      Delete Comment
+                    </Button>
+                  )}
                 </Box>
               ))
             ) : (
@@ -300,6 +381,21 @@ function UserPhotos({ userId }) {
                 Uploaded on: {new Date(photo_obj.date_time).toLocaleString()}
               </Typography>
 
+              {/* Delete photo button if current user is the owner */}
+              {currentUser && String(photo_obj.user_id) === String(currentUser._id) && (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => handleDeletePhoto(photo_obj._id)}
+                    disabled={deletePhotoMutation.isPending}
+                  >
+                    {deletePhotoMutation.isPending ? 'Deleting...' : 'Delete Photo'}
+                  </Button>
+                </Box>
+              )}
+
               {/* Render comments if available */}
               {photo_obj.comments && photo_obj.comments.length > 0 ? (
                 <>
@@ -323,6 +419,18 @@ function UserPhotos({ userId }) {
                       <Typography variant="body1" sx={{ ml: 1 }}>
                         {comment.comment}
                       </Typography>
+                      
+                      {/* Delete comment button for the author */}
+                      {currentUser && comment.user._id === currentUser._id && (
+                        <Button
+                          size="small"
+                          color="error"
+                          sx={{ mt: 0.5, ml: 1 }}
+                          onClick={() => handleDeleteComment(photo_obj._id, comment._id)}
+                        >
+                          Delete Comment
+                        </Button>
+                      )}
                     </Box>
                   ))}
                 </>

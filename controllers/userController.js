@@ -1,6 +1,14 @@
 import mongoose from "mongoose";
+import fs from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import User from "../schema/user.js";
 import Photo from "../schema/photo.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ROOT_DIR = join(__dirname, "..");
+const IMAGES_DIR = join(ROOT_DIR, "images");
 
 // register a new user
 export async function register(req, res) {
@@ -261,5 +269,63 @@ export async function userMentionsById(req, res) {
   } catch (err) {
     console.error('Error fetching mention-photos for user:', err);
     return res.status(500).send({ error: 'Internal server error' });
+  }
+}
+
+// Deletes a user and all associated data
+export async function deleteUser(req, res) {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).send({ error: "Invalid user ID" });
+  }
+
+  try {
+    const sessionUserId = req.session?.userId;
+    if (!sessionUserId) {
+      return res.status(401).send({ error: "Unauthorized" });
+    }
+
+    // Only the user can delete their own account
+    if (String(sessionUserId) !== String(id)) {
+      return res.status(403).send({ error: "You can only delete your own account" });
+    }
+
+    const user = await User.findById(id).lean().exec();
+    if (!user) {
+      return res.status(400).send({ error: "User not found" });
+    }
+
+    // 1) Delete all photos owned by user (and optionally image files)
+    const photos = await Photo.find({ user_id: id }).lean().exec();
+
+    await Photo.deleteMany({ user_id: id }).exec();
+
+    // Try to delete associated image files; ignore errors if missing
+    photos.forEach((p) => {
+      const filePath = join(IMAGES_DIR, p.file_name);
+      fs.promises.unlink(filePath).catch(() => {});
+    });
+
+    // 2) Delete all comments authored by this user on anyone's photos
+    await Photo.updateMany(
+      {},
+      { $pull: { comments: { user_id: new mongoose.Types.ObjectId(id) } } }
+    ).exec();
+
+    // 3) Delete the user itself
+    await User.deleteOne({ _id: id }).exec();
+
+    // 4) Destroy session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying session on deleteUser:", err);
+      }
+    });
+
+    return res.status(200).send({ message: "User account and all associated data deleted" });
+  } catch (err) {
+    console.error("Error deleting user:", err);
+    return res.status(500).send({ error: "Internal server error" });
   }
 }

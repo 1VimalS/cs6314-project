@@ -2,7 +2,7 @@ import { useEffect, useState, React } from 'react';
 import { useLocation, matchPath, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Switch, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchUser, logout, uploadPhoto } from '../../api';
+import { fetchUser, logout, uploadPhoto, deleteUserAccount } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
@@ -19,6 +19,7 @@ function TopBar() {
   // Text displayed on the right side of the top bar
   const [topBarText, setTopBarText] = useState('Click on any User Below!');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
 
@@ -93,6 +94,22 @@ function TopBar() {
     },
   });
 
+  // delete user account mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: () => deleteUserAccount(currentUser._id),
+    onSuccess: () => {
+      // Clear all client-side state
+      clearCurrentUser();
+      queryClient.clear();
+      setAdvancedEnabled(false);
+      navigate('/');
+    },
+    onError: (error) => {
+      console.error('Error deleting account:', error);
+      // You can show an Alert/snackbar if you like
+    },
+  });
+
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -143,6 +160,14 @@ function TopBar() {
                 sx={{ ml: 1 }}
               >
                 Logout
+              </Button>
+              <Button
+                color="inherit"
+                variant="outlined"
+                onClick={() => setDeleteDialogOpen(true)}
+                sx={{ ml: 1 }}
+              >
+                Delete Account
               </Button>
             </>
           ) : (
@@ -210,6 +235,32 @@ function TopBar() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            This will permanently delete your account, all of your photos,
+            and all comments you have authored. This action cannot be undone.
+            Are you sure you want to continue?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              deleteUserMutation.mutate();
+              setDeleteDialogOpen(false);
+            }}
+            color="error"
+            variant="contained"
+            disabled={deleteUserMutation.isPending}
+          >
+            {deleteUserMutation.isPending ? 'Deleting...' : 'Yes, delete my account'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </AppBar>
   );
 }

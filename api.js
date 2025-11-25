@@ -56,6 +56,16 @@ export const fetchUserMentions = async (userId) => {
   }
 };
 
+export const deleteUserAccount = async (userId) => {
+  try {
+    const res = await api.delete(`/user/${userId}`);
+    return res.data;
+  } catch (error) {
+    console.error('Error deleting user account:', error);
+    throw error;
+  }
+};
+
 // Photos
 export const fetchPhotosOfUser = async (userId) => {
   try {
@@ -82,6 +92,16 @@ export const fetchPhotoOfUserByIndex = async (userId, index) => {
   }
 };
 
+export const deletePhoto = async (photoId) => {
+  try {
+    const res = await api.delete(`/photosOfUser/${photoId}`);
+    return res.data;
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    throw error;
+  }
+};
+
 // Comments
 export const addComment = async (photoId, comment, mentions = []) => {
   try {
@@ -89,6 +109,16 @@ export const addComment = async (photoId, comment, mentions = []) => {
     return res.data;
   } catch (error) {
     console.error('Error adding comment:', error);
+    throw error;
+  }
+};
+
+export const deleteComment = async (photoId, commentId) => {
+  try {
+    const res = await api.delete(`/commentsOfPhoto/${photoId}/${commentId}`);
+    return res.data;
+  } catch (error) {
+    console.error('Error deleting comment:', error);
     throw error;
   }
 };
