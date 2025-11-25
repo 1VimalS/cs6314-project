@@ -170,16 +170,10 @@ function UserPhotos({ userId }) {
   };
 
   const handleDeletePhoto = (photoId) => {
-    if (!window.confirm('Are you sure you want to delete this photo and all its comments?')) {
-      return;
-    }
     deletePhotoMutation.mutate(photoId);
   };
 
   const handleDeleteComment = (photoId, commentId) => {
-    if (!window.confirm('Delete this comment?')) {
-      return;
-    }
     deleteCommentMutation.mutate({ photoId, commentId });
   };
 
