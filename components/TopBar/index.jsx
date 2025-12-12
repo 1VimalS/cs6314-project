@@ -148,6 +148,14 @@ function TopBar() {
               <Button
                 color="inherit"
                 variant="outlined"
+                onClick={() => navigate('/favorites')}
+                sx={{ ml: 1 }}
+              >
+                Favorites
+              </Button>
+              <Button
+                color="inherit"
+                variant="outlined"
                 onClick={() => setUploadDialogOpen(true)}
                 sx={{ ml: 1 }}
               >

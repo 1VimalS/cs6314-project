@@ -2,13 +2,68 @@ import { React, useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import PropTypes from 'prop-types';
-import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, Button, Alert } from '@mui/material';
+import { Typography, Card, CardContent, CardMedia, Box, Divider, Link as MuiLink, IconButton, Stack, Button, Alert, Tooltip } from '@mui/material';
+import { Favorite as FavoriteIcon, FavoriteBorder as FavoriteBorderIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MentionsInput, Mention } from 'react-mentions';
-import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment, fetchUsers, deletePhoto, deleteComment } from '../../api';
+import { fetchPhotosOfUser, fetchPhotoOfUserByIndex, addComment, fetchUsers, deletePhoto, deleteComment, addFavorite, removeFavorite, checkFavorite } from '../../api';
 import useAppStore from '../../store/useAppStore';
 
 import './styles.css';
+
+// FavoriteButton component - checks and toggles favorite status
+function FavoriteButton({ photoId, currentUser }) {
+  const queryClient = useQueryClient();
+  const { data: isFavorited = false } = useQuery({
+    queryKey: ['favoriteStatus', photoId],
+    queryFn: () => checkFavorite(photoId),
+    enabled: !!currentUser && !!photoId,
+  });
+
+  const addFavoriteMutation = useMutation({
+    mutationFn: (id) => addFavorite(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favoriteStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+    },
+  });
+
+  const removeFavoriteMutation = useMutation({
+    mutationFn: (id) => removeFavorite(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favoriteStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+    },
+  });
+
+  const handleToggleFavorite = () => {
+    if (isFavorited) {
+      removeFavoriteMutation.mutate(photoId);
+    } else {
+      addFavoriteMutation.mutate(photoId);
+    }
+  };
+
+  if (!currentUser) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}>
+      <IconButton
+        onClick={handleToggleFavorite}
+        disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
+        color={isFavorited ? 'error' : 'default'}
+        sx={{
+          color: isFavorited ? '#f44336' : 'inherit',
+        }}
+        aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        {isFavorited ? <FavoriteIcon /> : <FavoriteBorderIcon />}
+      </IconButton>
+    </Tooltip>
+  );
+}
 
 function UserPhotos({ userId }) {
   const navigate = useNavigate();
@@ -21,7 +76,7 @@ function UserPhotos({ userId }) {
   const [advancedMentions, setAdvancedMentions] = useState([]);
   const [commentValue, setCommentValue] = useState('');
   const [commentPlainText, setCommentPlainText] = useState('');
-  
+
 
   // mentions states for advanced mode
   const [commentMentions, setCommentMentions] = useState({});
@@ -144,8 +199,8 @@ function UserPhotos({ userId }) {
       return;
     }
     const mentionsArray = mentions
-    ?? (photoId ? commentMentions[photoId] : advancedMentions)
-    ?? [];
+      ?? (photoId ? commentMentions[photoId] : advancedMentions)
+      ?? [];
 
     const mentionIds = mentionsArray.map((m) => m.id);
 
@@ -215,7 +270,7 @@ function UserPhotos({ userId }) {
               onClick={handlePrev}
               disabled={currentIndex <= 1}
             >
-              {'‹'}
+              {'<'}
             </IconButton>
             <Box sx={{ flex: 1 }}>
               <CardMedia
@@ -231,13 +286,16 @@ function UserPhotos({ userId }) {
               onClick={handleNext}
               disabled={currentIndex >= totalPhotos}
             >
-              {'›'}
+              {'>'}
             </IconButton>
           </Box>
           <CardContent>
-            <Typography variant="caption" color="textSecondary">
-              Uploaded on: {new Date(photo.date_time).toLocaleString()}
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="caption" color="textSecondary">
+                Uploaded on: {new Date(photo.date_time).toLocaleString()}
+              </Typography>
+              <FavoriteButton photoId={photo._id} currentUser={currentUser} />
+            </Box>
 
             {/* Delete photo button if current user is the owner */}
             {currentUser && String(photo.user_id) === String(currentUser._id) && (
@@ -370,10 +428,13 @@ function UserPhotos({ userId }) {
               sx={{ maxHeight: 300, objectFit: 'contain' }}
             />
             <CardContent>
-              {/* Photo upload timestamp */}
-              <Typography variant="caption" color="textSecondary">
-                Uploaded on: {new Date(photo_obj.date_time).toLocaleString()}
-              </Typography>
+              {/* Photo upload timestamp and favorite button */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" color="textSecondary">
+                  Uploaded on: {new Date(photo_obj.date_time).toLocaleString()}
+                </Typography>
+                <FavoriteButton photoId={photo_obj._id} currentUser={currentUser} />
+              </Box>
 
               {/* Delete photo button if current user is the owner */}
               {currentUser && String(photo_obj.user_id) === String(currentUser._id) && (
@@ -413,7 +474,7 @@ function UserPhotos({ userId }) {
                       <Typography variant="body1" sx={{ ml: 1 }}>
                         {comment.comment}
                       </Typography>
-                      
+
                       {/* Delete comment button for the author */}
                       {currentUser && comment.user._id === currentUser._id && (
                         <Button
@@ -472,10 +533,10 @@ function UserPhotos({ userId }) {
                       data={mentionUsers}
                       displayTransform={(id, display) => `@${display}`}
                       renderSuggestion={(entry, search, highlightedDisplay, index, focused) => (
-                      <div className={`mui-mention-item ${focused ? "focused" : ""}`}>
-                        <div className="mui-mention-text">{highlightedDisplay}</div>
-                      </div>
-                    )}
+                        <div className={`mui-mention-item ${focused ? "focused" : ""}`}>
+                          <div className="mui-mention-text">{highlightedDisplay}</div>
+                        </div>
+                      )}
                     />
                   </MentionsInput>
 

@@ -13,6 +13,7 @@ import UserList from './components/UserList';
 import UserPhotos from './components/UserPhotos';
 import UserComments from './components/UserComments';
 import LoginRegister from './components/LoginRegister';
+import Favorites from './components/Favorites';
 import useAppStore from './store/useAppStore';
 import { getCurrentUser } from './api';
 
@@ -40,6 +41,14 @@ function UserCommentsRoute() {
   return (
     <ProtectedRoute>
       <UserComments userId={userId} />
+    </ProtectedRoute>
+  );
+}
+
+function FavoritesRoute() {
+  return (
+    <ProtectedRoute>
+      <Favorites />
     </ProtectedRoute>
   );
 }
@@ -107,6 +116,7 @@ function PhotoShare() {
                     <Route path="/photos/:userId" element={<UserPhotosRoute />} />
                     <Route path="/photos/:userId/:index" element={<UserPhotosRoute />} />
                     <Route path="/comments/:userId" element={<UserCommentsRoute />} />
+                    <Route path="/favorites" element={<FavoritesRoute />} />
                     {/* Default route to current user's detail */}
                     <Route path="/" element={<Navigate to={`/users/${currentUser._id}`} replace />} />
                   </Routes>

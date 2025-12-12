@@ -5,6 +5,7 @@ import photoRoutes from "./photo.js";
 import testRoutes from "./test.js";
 import newPhotoRoute from "./newPhoto.js";
 import commentRoute from "./comment.js";
+import favoriteRoute from "./favorite.js";
 
 // Main router which links to further sub-routers
 const router = express.Router();
@@ -16,6 +17,7 @@ router.use("/test", testRoutes);
 
 router.use("/photos", newPhotoRoute);
 router.use("/commentsOfPhoto", commentRoute);
+router.use("/favorites", favoriteRoute);
 
 router.get("/", (req, res) => {
   res.send("Simple web server of files from " + __dirname);
