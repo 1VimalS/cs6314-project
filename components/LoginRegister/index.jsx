@@ -41,7 +41,7 @@ function LoginRegister() {
     },
     onError: (err) => {
       if (err.response && err.response.status === 400) {
-        setError(err.response.data?.error || 'Invalid login name or password. Please try again.');
+        setError('Invalid login name or password. Please try again.');
       } else {
         setError('An error occurred during login. Please try again.');
       }

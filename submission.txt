@@ -1,40 +1,38 @@
-Project 4 - Submission Form
-
-Please fill in this form and submit it with your Project 4.
-
-Enter no more than 6 user stories that you did for the assignment
-that you would like to be graded on. 
-Additionally, specify the story for which you implemented real-time updates.
-
-For each story include the following information:
-
-Story number and name:
-Story points:
-Brief description to see the story in action:
-
-Total Story Points:
-
-Marketing Video URL (ensure permissions are set to public viewing):
-
-Is it OK if we post your Marketing Video URL on the class discussion forum?
-[Yes/No]
-
-Any special instructions for grading (it should be easy for someone to run your
-app from a new machine):
-
-**************** Example **********************
-* As an example: if you did only story 5, your file would look like:
-* 
-* Story number and name:  5 - Activity Feed
+* Story number and name:  2 - @mentions in comments
+* Story points:  6
+* Brief description to see the story in action:
+* Log in and write a comment, where you type @ and see
+* the list of other users pop up. Pick a user and submit
+* your comment. Then on that user's page, you should see
+* your comment in the mentioned section. If you want to
+* see socket functionality, log in as a separate user
+* on another window simulatenously while you post your
+* comment, and on the user's page, you should see the
+* mention pop up without any refresh. 
+*
+*
+* Story number and name: 5 - Deleting comments, photos, and users
 * Story points:  4
 * Brief description to see the story in action:
-* Push the button labeled Activity on the toolbar to view the 
-* 10 most recent activities of the current user.
+* Log in and write a comment, delete the comment.
+* Upload a photo, then delete the photo. Finally
+* after having photos and comments uploaded, delete
+* your account, and login as another user to see all
+* your posted data removed.
+*
+* Story number and name: 7 - Favorite list of photos for users
+* Story points:  6
+* Brief description to see the story in action:
+* Log in and favorite some photos, go to your
+* favorites section and view the photos. Click
+* a photo to open the modal view and see extra
+* info. Click the X to remove the photo from
+* favorites. 
 * 
-* Total Story Points: 4
+* Total Story Points: 16
 * 
-* Marketing Video URL (ensure permissions are set to public viewing):
-* http://www.youtube.com ---
+* Marketing Video URL:
+* http://www.youtube.com/watch?v=XfclEndv5Oo
 * 
 * Is it OK if we post your Marketing Video URL on the class discussion forum?
 * Yes
@@ -42,6 +40,4 @@ app from a new machine):
 * Any special instructions for grading (it should be easy 
 * for someone to run your app from a new machine):
 * None
-
-**************** Example **********************
 
